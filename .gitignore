@@ -1,0 +1,52 @@
+# Build results
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+.vs/
+*.userprefs
+
+#AI过来的patch
+*.patch
+#本地生成diff给AI
+*.diff
+
+# Models (太大，不提交)
+Models/*.caffemodel
+Models/*.t7
+Models/*.bin
+Models/*.dat
+Models/*.prototxt
+Models/*.txt
+!Models/.gitkeep
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# User config
+progress.json
+directories.json
+forum_config.json
+
+# Cache
+*.tmp
+*.old
+*.maskface.jpg
+*.Upscayl.jpg
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# ReSharper
+_ReSharper*/
+*.DotSettings.user
+
+# CefSharp
+CefSharp/
+chromium/
+
+packages/
