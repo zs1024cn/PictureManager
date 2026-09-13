@@ -89,7 +89,7 @@ namespace PictureManager
                             DuplicateSettings.SiftMaxFeatures,
                             DuplicateSettings.SiftMaxDim);
 
-                        feature.Hsv = Duplicate.ExtractHsvByMat(cropped, file);
+                        //feature.Hsv = Duplicate.ExtractHsvByMat(cropped, file);
                     }
                 }
             }

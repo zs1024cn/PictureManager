@@ -33,38 +33,6 @@ namespace PictureManager
             }
         }
 
-        // ========== Hash ==========
-
-        public static byte[] GetHash(string fileName, int iSize, int iGray, float fRed, float fGreen, float fBlue, int cropIndex, int maxFeatures, int imaxDim)
-        {
-            if (string.IsNullOrEmpty(fileName)) return null;
-            if (HashCache.TryGetValue(fileName, out byte[] hash)) return hash;
-            if (HashCacheDeleted.TryGetValue(fileName, out hash)) return hash;
-
-            using (var src = ReadPictureToMat(fileName))
-            {
-                if (src == null || src.Empty()) return null;
-                using (var cropped = CropByIndex(src, cropIndex))
-                {
-                    hash = ExtractHashFeaturesToByte_OpenCV_FromMat(cropped, iSize, iGray);
-
-                    if (!DctCache.ContainsKey(fileName))
-                        GetDctByMat(cropped, fileName);
-
-                    if (!SiftCache.ContainsKey(fileName))
-                        GetSiftByMat(cropped, fileName, maxFeatures, imaxDim);
-
-                    if (!HsvCache.ContainsKey(fileName))
-                        GetHsvByMat(cropped, fileName);
-                }
-            }
-            if (hash != null)
-            {
-                lock (_cacheLock) { HashCache[fileName] = hash; }
-            }
-            return hash;
-        }
-
         private static byte[] ExtractHashFeaturesToByte_OpenCV_FromMat(Mat src, int iSize, int iGray)
         {
             try
@@ -85,31 +53,6 @@ namespace PictureManager
             {
                 return null;
             }
-        }
-
-        // ========== DCT ==========
-
-        public static Mat GetDct(string fileName, int cropIndex)
-        {
-            if (string.IsNullOrEmpty(fileName)) return null;
-            if (DctCache.TryGetValue(fileName, out Mat dct)) return dct;
-            if (DctCacheDeleted.TryGetValue(fileName, out dct)) return dct;
-
-            using (var src = ReadPictureToMat(fileName))
-            {
-                return GetDctByMat(src, fileName);
-            }
-        }
-
-        private static Mat GetDctByMat(Mat src, string fileName)
-        {
-            if (src == null || src.Empty()) return null;
-            Mat dct = ExtractDctFeatures2_FromMat(src);
-            if (dct != null && !dct.Empty())
-            {
-                lock (_cacheLock) { DctCache[fileName] = dct; }
-            }
-            return dct;
         }
 
         private static Mat ExtractDctFeatures2_FromMat(Mat src)
@@ -151,17 +94,6 @@ namespace PictureManager
             }
         }
 
-        public static void Hist_A(Mat[] matA_S, out Mat hist_A)
-        {
-            int[] channels = { 0 };
-            Rangef[] histRange = { new Rangef(0, 256) };
-            int[] histSize = { 256 };
-
-            hist_A = new Mat();
-            Cv2.CalcHist(matA_S, channels, null, hist_A, 1, histSize, histRange, true, false);
-            Cv2.Normalize(hist_A, hist_A, 0, 1, NormTypes.MinMax);
-        }
-
         private static void Hist_A_Single(Mat channel, out Mat hist)
         {
             int[] channels = { 0 };
@@ -172,47 +104,6 @@ namespace PictureManager
             Cv2.Normalize(hist, hist, 0, 1, NormTypes.MinMax);
         }
 
-        // ========== SIFT ==========
-
-        public static Tuple<KeyPoint[], Mat> GetSift(string fileName, int maxFeatures, int imaxDim)
-        {
-            if (string.IsNullOrEmpty(fileName)) return null;
-            if (SiftCache.TryGetValue(fileName, out Tuple<KeyPoint[], Mat> features)) return features;
-            if (SiftCacheDeleted.TryGetValue(fileName, out features)) return features;
-            features = ExtractSiftFeatures(fileName, maxFeatures, imaxDim);
-
-            if (features != null)
-            {
-                lock (_cacheLock)
-                {
-                    SiftCache[fileName] = features;
-                }
-            }
-            return features;
-        }
-
-        public static Tuple<KeyPoint[], Mat> GetSiftByMat(Mat src, string fileName, int maxFeatures, int imaxDim)
-        {
-            Tuple<KeyPoint[], Mat> features = ExtractSiftFeaturesByMat(src, fileName, maxFeatures, imaxDim);
-            if (features != null)
-            {
-                lock (_cacheLock) { SiftCache[fileName] = features; }
-            }
-            return features;
-        }
-
-        private static Tuple<KeyPoint[], Mat> ExtractSiftFeatures(string imagePath, int maxFeatures = 500, int maxDim = 800)
-        {
-            try
-            {
-                Mat mat = ReadPictureToMat(imagePath);
-                return ExtractSiftFeaturesByMat(mat, imagePath, maxFeatures, maxDim);
-            }
-            catch
-            {
-                return null;
-            }
-        }
 
         private static Tuple<KeyPoint[], Mat> ExtractSiftFeaturesByMat(Mat mat, string imagePath, int maxFeatures = 500, int maxDim = 800)
         {
@@ -303,22 +194,6 @@ namespace PictureManager
             {
                 return null;
             }
-        }
-
-        public static float[] GetHsvByMat(Mat src, string fileName)
-        {
-            if (HsvCache.TryGetValue(fileName, out float[] hsv)) return hsv;
-            if (HsvCacheDeleted.TryGetValue(fileName, out hsv)) return hsv;
-
-            using (var safeCopy = src.Clone())
-            {
-                hsv = ComputeHsvByMat(safeCopy);
-            }
-            if (hsv != null)
-            {
-                HsvCache[fileName] = hsv;
-            }
-            return hsv;
         }
 
         private static float[] ComputeHsvByMat(Mat src)
