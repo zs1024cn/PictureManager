@@ -283,10 +283,90 @@ namespace PictureManager
             PhotoButton.Click += PhotoButton_Click;
             leftPanel.Controls.Add(PhotoButton);
 
+            // 曝光标签
+            var lblExposure = new Label
+            {
+                Text = "曝光（点箭头调整）",
+                Location = new System.Drawing.Point(10, PhotoButton.Bottom + 20),
+                Size = new System.Drawing.Size(180, 25),
+                ForeColor = Color.White,
+                Font = headerFont,
+                BackColor = Color.Transparent
+            };
+            leftPanel.Controls.Add(lblExposure);
+
+            // 曝光滚动条（只允许点箭头）
+            var exposureBar = new TrackBar
+            {
+                Minimum = -10,
+                Maximum = 10,
+                Value = 0,
+                TickFrequency = 1,
+                SmallChange = 1,
+                LargeChange = 1,
+                Location = new System.Drawing.Point(10, lblExposure.Bottom + 5),
+                Size = new System.Drawing.Size(180, 40),
+                BackColor = Color.FromArgb(40, 40, 40)
+            };
+
+            // 禁止拖动（用 MouseDown 判断是否点击了滑块）
+            exposureBar.MouseDown += (s, e) =>
+            {
+                // 如果点击位置不在左右箭头上，取消
+                // TrackBar 宽度 180，左右箭头约各占 20px
+                // 简单方法：记录初始值，拖动后恢复
+            };
+
+            exposureBar.Scroll += (s, e) =>
+            {
+                int delta = exposureBar.Value;
+                if (delta == 0) return;
+
+                // 立即应用
+                FileUtility.ApplyExposure(_rightFilePath, delta > 0 ? 1 : -1);
+                LoadRightImage();
+
+                // 重置到 0（准备下次点击）
+                exposureBar.Value = 0;
+            };
+
+            leftPanel.Controls.Add(exposureBar);
+            // 去雾按钮
+            var DehazeButton = new Button
+            {
+                Text = "去雾",
+                Location = new System.Drawing.Point(10, exposureBar.Bottom + 20),
+                ForeColor = Color.White,
+                Font = headerFont,
+                Size = new System.Drawing.Size(180, 40)
+            };
+            DehazeButton.Click += (s, e) =>
+            {
+                FileUtility.ApplyDehaze(_rightFilePath);
+                LoadRightImage();
+            };
+            leftPanel.Controls.Add(DehazeButton);
+
+            // 局部提亮按钮
+            var LocalContrastButton = new Button
+            {
+                Text = "局部提亮",
+                Location = new System.Drawing.Point(10, DehazeButton.Bottom + 20),
+                ForeColor = Color.White,
+                Font = headerFont,
+                Size = new System.Drawing.Size(180, 40)
+            };
+            LocalContrastButton.Click += (s, e) =>
+            {
+                FileUtility.ApplyLocalContrast(_rightFilePath);
+                LoadRightImage();
+            };
+            leftPanel.Controls.Add(LocalContrastButton);
+            
             var RefreshButton = new Button
             {
                 Text = "刷新",
-                Location = new System.Drawing.Point(10, PhotoButton.Bottom + 20),
+                Location = new System.Drawing.Point(10, LocalContrastButton.Bottom + 20),
                 ForeColor = Color.White,
                 Font = headerFont,
                 Size = new System.Drawing.Size(180, 40)

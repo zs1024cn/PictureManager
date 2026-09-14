@@ -383,9 +383,8 @@ namespace PictureManager
             }
         }
 
-        // ========== 去雾 / CLAHE（保留备用）==========
-
-        private static Mat ApplyCLAHE(Mat src, double clipLimit = 2.5)
+        // ========== 局部加亮 / CLAHE（保留备用）==========
+        public static Mat ApplyCLAHE(Mat src, double clipLimit = 2.5)
         {
             using (var lab = new Mat())
             {
@@ -409,7 +408,7 @@ namespace PictureManager
             }
         }
 
-        private static Mat Dehaze(Mat src, double omega = 0.95, int kernelSize = 15)
+        public static Mat Dehaze(Mat src, double omega = 0.95, int kernelSize = 15)
         {
             Mat darkChannel = GetDarkChannel(src, kernelSize);
             Scalar atmosphericLight = GetAtmosphericLight(src, darkChannel);
@@ -543,27 +542,74 @@ namespace PictureManager
             return transmission;
         }
 
-        private static Mat ApplyCLAHE(Mat src)
+        /// <summary>
+        /// 曝光调整。step: 正数提亮，负数变暗。单次调整量。
+        /// </summary>
+        public static void ApplyExposure(string file, int step)
         {
-            using (var lab = new Mat())
+            if (step == 0) return;
+
+            using (var img = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
             {
-                Cv2.CvtColor(src, lab, ColorConversionCodes.BGR2Lab);
+                if (img.Empty()) return;
 
-                Mat[] channels = Cv2.Split(lab);
-
-                using (var clahe = Cv2.CreateCLAHE(2.5, new OpenCvSharp.Size(8, 8)))
+                using (var result = new Mat())
                 {
-                    clahe.Apply(channels[0], channels[0]);
+                    if (step > 0)
+                    {
+                        // 提亮：gamma 校正
+                        double gamma = 0.9;  // <1 提亮
+                        using (var lut = new Mat(1, 256, MatType.CV_8U))
+                        {
+                            for (int i = 0; i < 256; i++)
+                            {
+                                lut.At<byte>(0, i) = (byte)Math.Min(255,
+                                    (int)(Math.Pow(i / 255.0, gamma) * 255.0));
+                            }
+                            Cv2.LUT(img, lut, result);
+                        }
+                    }
+                    else
+                    {
+                        // 变暗：降亮度
+                        img.ConvertTo(result, -1, 1.0, -10);
+                    }
+
+                    byte[] jpegBytes = result.ImEncode(".jpg");
+                    File.WriteAllBytes(file, jpegBytes);
                 }
+            }
+        }
+        /// <summary>
+        /// 去雾（暗通道先验）。读文件 → 去雾 → 写回文件。
+        /// </summary>
+        public static void ApplyDehaze(string file)
+        {
+            using (var img = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
+            {
+                if (img.Empty()) return;
 
-                Cv2.Merge(channels, lab);
+                using (var result = Dehaze(img))
+                {
+                    byte[] jpegBytes = result.ImEncode(".jpg");
+                    File.WriteAllBytes(file, jpegBytes);
+                }
+            }
+        }
+        /// <summary>
+        /// 局部对比度增强（CLAHE）。读文件 → 处理 → 写回。
+        /// </summary>
+        public static void ApplyLocalContrast(string file)
+        {
+            using (var img = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
+            {
+                if (img.Empty()) return;
 
-                Mat result = new Mat();
-                Cv2.CvtColor(lab, result, ColorConversionCodes.Lab2BGR);
-
-                foreach (var ch in channels) ch.Dispose();
-
-                return result;
+                using (var result = ApplyCLAHE(img, 2.5))
+                {
+                    byte[] jpegBytes = result.ImEncode(".jpg");
+                    File.WriteAllBytes(file, jpegBytes);
+                }
             }
         }
     }
