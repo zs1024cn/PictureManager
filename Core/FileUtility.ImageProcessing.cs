@@ -165,10 +165,109 @@ namespace PictureManager
                 File.WriteAllBytes(file, jpegBytes);
             }
         }
-
+        /// <summary>
+        /// 颜色增强。在 HSV 空间提升目标色相的饱和度。
+        /// c: 目标颜色（红/绿/蓝）。
+        /// </summary>
+        /// <summary>
+        /// 颜色增强。只对"局部突出"的目标色相区域提升饱和度。
+        /// c: 目标颜色（红/绿/蓝）。
+        /// </summary>
         public static void ApplyColorEnhance(string file, Color c)
         {
-            double enhanceRatio = 0.1;
+            using (var img = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
+            {
+                if (img.Empty()) return;
+
+                using (var hsv = new Mat())
+                {
+                    Cv2.CvtColor(img, hsv, ColorConversionCodes.BGR2HSV);
+
+                    // 目标色相范围（OpenCV H: 0-180）
+                    int hMin = 0, hMax = 0;
+
+                    if (c.R > c.G && c.R > c.B)
+                    {
+                        // 红
+                        hMin = 0; hMax = 10;
+                    }
+                    else if (c.G > c.R && c.G > c.B)
+                    {
+                        // 绿
+                        hMin = 40; hMax = 80;
+                    }
+                    else
+                    {
+                        // 蓝
+                        hMin = 100; hMax = 130;
+                    }
+
+                    // 分离 HSV 通道
+                    Mat[] channels = Cv2.Split(hsv);
+                    Mat hueCh = channels[0];
+                    Mat satCh = channels[1];
+                    Mat valCh = channels[2];
+
+                    // 1. 色相掩膜（限定目标颜色）
+                    using (var hueMask1 = new Mat())
+                    using (var hueMask2 = new Mat())
+                    using (var hueMask = new Mat())
+                    {
+                        Cv2.InRange(hsv, new Scalar(hMin, 30, 30), new Scalar(hMax, 255, 255), hueMask1);
+
+                        if (hMin == 0 && hMax == 10)
+                        {
+                            Cv2.InRange(hsv, new Scalar(170, 30, 30), new Scalar(180, 255, 255), hueMask2);
+                            Cv2.BitwiseOr(hueMask1, hueMask2, hueMask);
+                        }
+                        else
+                        {
+                            hueMask1.CopyTo(hueMask);
+                        }
+                        // 面积过滤：去掉零星小点
+                        using (var kernel = Cv2.GetStructuringElement(MorphShapes.Ellipse, new OpenCvSharp.Size(5, 5)))
+                        {
+                            Cv2.MorphologyEx(hueMask, hueMask, MorphTypes.Open, kernel);
+                        }
+                        // 2. 局部对比度掩膜（局部突出）
+                        using (var satBlur = new Mat())
+                        using (var localContrast = new Mat())
+                        using (var contrastMask = new Mat())
+                        using (var finalMask = new Mat())
+                        {
+                            Cv2.Blur(satCh, satBlur, new OpenCvSharp.Size(15, 15));
+                            Cv2.Subtract(satCh, satBlur, localContrast);
+                            Cv2.Threshold(localContrast, contrastMask, 40, 255, ThresholdTypes.Binary);
+
+                            // 交集
+                            Cv2.BitwiseAnd(hueMask, contrastMask, finalMask);
+
+                            // 3. 提升饱和度
+                            using (var satBoost = new Mat())
+                            {
+                                satCh.ConvertTo(satBoost, -1, 1.4, 0);
+                                satBoost.CopyTo(satCh, finalMask);
+                            }
+                        }
+                    }
+
+                    // 4. 合并回 HSV，转 BGR
+                    Cv2.Merge(channels, hsv);
+                    foreach (var ch in channels) ch.Dispose();
+
+                    using (var result = new Mat())
+                    {
+                        Cv2.CvtColor(hsv, result, ColorConversionCodes.HSV2BGR);
+
+                        byte[] jpegBytes = result.ImEncode(".jpg");
+                        File.WriteAllBytes(file, jpegBytes);
+                    }
+                }
+            }
+        }
+        public static void ApplyColorEnhanceBak(string file, Color c)
+        {
+            double enhanceRatio = 0.02;
             int gbLimit = 30;
             int whiteLimit = 100;
 
@@ -220,15 +319,30 @@ namespace PictureManager
                     using (var otherHalf = new Mat())
                     using (var diff = new Mat())
                     using (var enhancement = new Mat())
+                    using (var targetF = new Mat())
+                    using (var targetSq = new Mat())
+                    using (var enhancementF = new Mat())
+                    using (var enhancementFinal = new Mat())
                     {
                         Cv2.Add(other1, other2, otherSum);
                         Cv2.Divide(otherSum, 2.0, otherHalf);
                         Cv2.Subtract(target, otherHalf, diff);
                         Cv2.Multiply(diff, enhanceRatio, enhancement);
 
+                        // 非线性权重：(target/255)²
+                        target.ConvertTo(targetF, MatType.CV_32F, 1.0 / 255.0);
+                        Cv2.Multiply(targetF, targetF, targetSq);
+
+                        enhancement.ConvertTo(enhancementF, MatType.CV_32F);
+                        Cv2.Multiply(enhancementF, targetSq, enhancementFinal);
+
+                        // 转回 8U
+                        enhancementFinal.ConvertTo(enhancement, MatType.CV_8U);
+
+                        // target 增加，other1 和 other2 减少
                         Cv2.Add(target, enhancement, target, mask);
-                        Cv2.Subtract(other1, enhancement * 2, other1, mask);
-                        Cv2.Subtract(other2, enhancement * 2, other2, mask);
+                        Cv2.Subtract(other1, enhancement * 5, other1, mask);
+                        Cv2.Subtract(other2, enhancement * 5, other2, mask);
                     }
                 }
 
