@@ -98,6 +98,13 @@ namespace PictureManager
 
             foreach (var bucket in buckets.Values)
             {
+                // 超大桶跳过（避免 O(n²) 爆炸）
+                const int MAX_BUCKET_SIZE = 100;
+                if (bucket.Count > MAX_BUCKET_SIZE)
+                {
+                    Debug.WriteLine($"跳过超大桶: {bucket.Count} 张");
+                    continue;
+                }
                 for (int i = 0; i < bucket.Count; i++)
                 {
                     if (visited.Contains(bucket[i])) continue;

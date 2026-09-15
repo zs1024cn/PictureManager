@@ -27,7 +27,7 @@ namespace PictureManager
                 s += "F8：删除磁盘里包含关键字的目录，不标记为垃圾\r\n";
                 s += "F9：以兼容方式显示文件\r\n";
                 s += "F12：全屏\r\n";
-                s += "Ctrl+S：重建图片并保存，ctrl+-:缩放图片\r\n";
+                s += "ctrl+s：重建图片并保存，ctrl+ r:旋转；ctrl+-:缩放图片\r\n";
                 s += "v=Hash/Dct/Sift相似图; f=Hsv相似图; t=AI增强; z=点赞; x=踩; d=删除; e=画图;ctrl+e=脸部马赛克\r\n";
                 MessageBox.Show(s);
             }
@@ -159,6 +159,13 @@ namespace PictureManager
             else if (e.Control && k == Keys.S)
             {
                 FileUtility.RebuildPicture(filePath);
+                e.Handled = true;
+                sCurrentFileName = "";
+                ShowPicture();
+            }
+            else if (e.Control && k == Keys.R)
+            {
+                FileUtility.RotateClockwise(filePath);
                 e.Handled = true;
                 sCurrentFileName = "";
                 ShowPicture();

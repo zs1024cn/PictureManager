@@ -17,27 +17,26 @@ namespace PictureManager
         /// Hash 模式：一次提取 4 种基础特征（Hash/DCT/SIFT/HSV）
         /// 其他模式：只提取对应的一种
         /// </summary>
-        private async Task CalcFeaturesAsync()
+        private async Task CalcFeaturesAsync(CancellationToken token)
         {
             SyncSettingsFromUI();
 
             string mode = _currentCompareMode;
             var allFiles = GetValidImageFiles();
 
-            // 按模式筛选出需要提取的文件
             var cache = FeatureCacheManager.Instance;
             var filesToProcess = new List<string>();
 
             foreach (var file in allFiles)
             {
+                if (token.IsCancellationRequested) break;
+
                 if (!cache.GetAll().TryGetValue(file, out var feature))
                 {
-                    // 没缓存，需要提取
                     filesToProcess.Add(file);
                     continue;
                 }
 
-                // 已有缓存，检查是否缺当前模式对应的特征
                 bool needExtract = false;
                 switch (mode)
                 {
@@ -67,36 +66,87 @@ namespace PictureManager
 
             await Task.Run(() =>
             {
-                // 串行提取（DNN 模型非线程安全）
-                foreach (var file in filesToProcess)
+                bool canParallel = (mode == "Hash" || mode == "DCT" || mode == "SIFT" || mode == "HSV");
+
+                if (canParallel)
                 {
                     try
                     {
-                        FeatureCacheManager.Instance.GetOrExtract(file, mode);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.WriteLine($"提取失败: {file}, {ex.Message}");
-                    }
+                        Parallel.ForEach(filesToProcess,
+                            new ParallelOptions
+                            {
+                                MaxDegreeOfParallelism = Environment.ProcessorCount,
+                                CancellationToken = token
+                            },
+                            file =>
+                            {
+                                if (token.IsCancellationRequested) return;
 
-                    int current = Interlocked.Increment(ref processed);
-                    if (current % 10 == 0 || current == total)
+                                try
+                                {
+                                    FeatureCacheManager.Instance.GetOrExtract(file, mode);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Debug.WriteLine($"提取失败: {file}, {ex.Message}");
+                                }
+
+                                int current = Interlocked.Increment(ref processed);
+                                if (current % 50 == 0 || current == total)
+                                {
+                                    BeginInvoke(new Action(() =>
+                                    {
+                                        this.toolStripStatusLabelStatus.Text = $"{mode} 提取 {current}/{total}...";
+                                    }));
+                                }
+                            });
+                    }
+                    catch (OperationCanceledException)
                     {
-                        BeginInvoke(new Action(() =>
-                        {
-                            this.toolStripStatusLabelStatus.Text = $"{mode} 提取 {current}/{total}...";
-                        }));
+                        Debug.WriteLine("提取已取消");
                     }
                 }
-            });
+                else
+                {
+                    foreach (var file in filesToProcess)
+                    {
+                        if (token.IsCancellationRequested) break;
 
-            this.toolStripStatusLabelStatus.Text =
-                $"{mode} 提取完成. {total} 张, 耗时{(DateTime.Now - d0).TotalSeconds:F1}s";
+                        try
+                        {
+                            FeatureCacheManager.Instance.GetOrExtract(file, mode);
+                        }
+                        catch (Exception ex)
+                        {
+                            Debug.WriteLine($"提取失败: {file}, {ex.Message}");
+                        }
+
+                        int current = Interlocked.Increment(ref processed);
+                        if (current % 10 == 0 || current == total)
+                        {
+                            BeginInvoke(new Action(() =>
+                            {
+                                this.toolStripStatusLabelStatus.Text = $"{mode} 提取 {current}/{total}...";
+                            }));
+                        }
+                    }
+                }
+            }, token);
+
+            if (token.IsCancellationRequested)
+            {
+                this.toolStripStatusLabelStatus.Text = $"{mode} 提取已取消. 已处理 {processed}/{total}";
+            }
+            else
+            {
+                this.toolStripStatusLabelStatus.Text =
+                    $"{mode} 提取完成. {total} 张, 耗时{(DateTime.Now - d0).TotalSeconds:F1}s";
+            }
         }
         /// <summary>
         /// 用当前模式查找重复组。
         /// </summary>
-        private void CompareAll()
+        private async Task CompareAllAsync(CancellationToken token)
         {
             var comparer = PictureCompareManager.Get(_currentCompareMode);
             if (comparer == null)
@@ -113,7 +163,7 @@ namespace PictureManager
 
             this.toolStripStatusLabelStatus.Text = $"开始 {mode} 查重（分桶：{bucketType}）...";
 
-            Task.Run(() =>
+            await Task.Run(() =>
             {
                 DateTime d0 = DateTime.Now;
                 List<List<string>> groups;
@@ -126,6 +176,15 @@ namespace PictureManager
                     BeginInvoke(new Action(() =>
                     {
                         MessageBox.Show($"查重失败: {ex.Message}");
+                    }));
+                    return;
+                }
+
+                if (token.IsCancellationRequested)
+                {
+                    BeginInvoke(new Action(() =>
+                    {
+                        this.toolStripStatusLabelStatus.Text = $"{mode} 查重已取消";
                     }));
                     return;
                 }
@@ -143,7 +202,7 @@ namespace PictureManager
 
                     ShowGroupsPictures(groups);
                 }));
-            });
+            }, token);
         }
         /// <summary>
         /// 把 UI 控件的值同步到 DuplicateSettings
@@ -231,54 +290,100 @@ namespace PictureManager
         }
         private async void btnCalc_Click(object sender, EventArgs e)
         {
-            btnCalc.Enabled = false;
+            // 已在执行 → 点停止
+            if (_calcCts != null && !_calcCts.IsCancellationRequested)
+            {
+                _calcCts.Cancel();
+                return;
+            }
+
+            // 开始新任务
+            string originalText = btnCalc.Text;
+            _calcCts = new CancellationTokenSource();
+
+            btnCalc.Text = "■";
+            btnCalc.Enabled = true;
+
             try
             {
-                await CalcFeaturesAsync();
+                await CalcFeaturesAsync(_calcCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // 已取消
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"提取失败: {ex.Message}");
             }
             finally
             {
-                btnCalc.Enabled = true;
+                btnCalc.Text = originalText;
+                _calcCts.Dispose();
+                _calcCts = null;
             }
         }
 
-        private void btnCompare_Click(object sender, EventArgs e)
+        private async void btnCompare_Click(object sender, EventArgs e)
         {
-            btnCompare.Enabled = false;
+            // 已在执行 → 点停止
+            if (_compareCts != null && !_compareCts.IsCancellationRequested)
+            {
+                _compareCts.Cancel();
+                return;
+            }
+
+            // 检查是否有图提取了当前模式对应的特征
+            string mode = _currentCompareMode;
+            int readyCount = 0;
+            var cache = FeatureCacheManager.Instance;
+
+            foreach (var kvp in cache.GetAll())
+            {
+                bool has = false;
+                switch (mode)
+                {
+                    case "Hash": has = kvp.Value.Hash != null; break;
+                    case "DCT": has = kvp.Value.Dct != null; break;
+                    case "SIFT": has = kvp.Value.Sift != null; break;
+                    case "HSV": has = kvp.Value.Hsv != null; break;
+                    case "Face": has = kvp.Value.Face != null; break;
+                    case "Pose": has = kvp.Value.Pose != null; break;
+                    case "Scene": has = kvp.Value.Scene != null; break;
+                }
+                if (has) readyCount++;
+            }
+
+            if (readyCount == 0)
+            {
+                MessageBox.Show($"当前没有图片提取过 {mode} 特征。\r\n请先点计算按钮提取特征。");
+                return;
+            }
+
+            // 开始新任务
+            string originalText = btnCompare.Text;
+            _compareCts = new CancellationTokenSource();
+
+            btnCompare.Text = "■";
+            btnCompare.Enabled = true;
+
             try
             {
-                // 检查是否有图提取了当前模式对应的特征
-                string mode = _currentCompareMode;
-                int readyCount = 0;
-                var cache = FeatureCacheManager.Instance;
-
-                foreach (var kvp in cache.GetAll())
-                {
-                    bool has = false;
-                    switch (mode)
-                    {
-                        case "Hash": has = kvp.Value.Hash != null; break;
-                        case "DCT": has = kvp.Value.Dct != null; break;
-                        case "SIFT": has = kvp.Value.Sift != null; break;
-                        case "HSV": has = kvp.Value.Hsv != null; break;
-                        case "Face": has = kvp.Value.Face != null; break;
-                        case "Pose": has = kvp.Value.Pose != null; break;
-                        case "Scene": has = kvp.Value.Scene != null; break;
-                    }
-                    if (has) readyCount++;
-                }
-
-                if (readyCount == 0)
-                {
-                    MessageBox.Show($"当前没有图片提取过 {mode} 特征。\r\n请先点计算按钮提取特征。");
-                    return;
-                }
-
-                CompareAll();
+                await CompareAllAsync(_compareCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // 已取消
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"查重失败: {ex.Message}");
             }
             finally
             {
-                btnCompare.Enabled = true;
+                btnCompare.Text = originalText;
+                _compareCts.Dispose();
+                _compareCts = null;
             }
         }
         private void btnWorkflow_MouseDown(object sender, MouseEventArgs e)

@@ -79,6 +79,8 @@ namespace PictureManager
         private System.Windows.Forms.ContextMenuStrip menuWorkflow;
         // 工作流状态
         private string _currentCompareMode = "Hash";
+        private CancellationTokenSource _calcCts;
+        private CancellationTokenSource _compareCts;
         private HashSet<string> _deletedMetaList = new HashSet<string>();
 
         private ForumDownloader _downloader = new ForumDownloader();
@@ -123,13 +125,7 @@ namespace PictureManager
 
             // 动态生成工作流菜单
             BuildWorkflowMenu();
-
-            // 后台预热 DNN 模型（不阻塞 UI）
-            Task.Run(() =>
-            {
-                try { ImageFeatureExtractor.PreloadModels(); }
-                catch { }
-            });
+           
             LoadMetaJson();
 
             // 初始化数据库

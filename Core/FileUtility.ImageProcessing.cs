@@ -726,5 +726,30 @@ namespace PictureManager
                 }
             }
         }
+        /// <summary>
+        /// 顺时针旋转 90°。读文件 → 旋转 → 写回。
+        /// </summary>
+        public static void RotateClockwise(string file)
+        {
+            try
+            {
+                using (var img = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
+                {
+                    if (img.Empty()) return;
+
+                    using (var rotated = new Mat())
+                    {
+                        Cv2.Rotate(img, rotated, RotateFlags.Rotate90Clockwise);
+
+                        byte[] jpegBytes = rotated.ImEncode(".jpg");
+                        File.WriteAllBytes(file, jpegBytes);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RotateClockwise 失败: {file}, {ex.Message}");
+            }
+        }
     }
 }

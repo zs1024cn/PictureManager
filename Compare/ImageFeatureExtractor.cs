@@ -33,25 +33,43 @@ namespace PictureManager
         private static readonly object _lock = new object();
         private static bool _modelsReady = false;
 
-        /// <summary>预热所有 DNN 模型</summary>
-        public static void PreloadModels()
+        private static void EnsureFaceModels()
         {
-            EnsureModels();
-        }
-
-        private static void EnsureModels()
-        {
-            if (_modelsReady) return;
+            if (_netFaceDetect != null && _netOpenFace != null) return;
             lock (_lock)
             {
-                if (_modelsReady) return;
+                if (_netFaceDetect == null)
+                {
+                    try { if (File.Exists(ProtoFace) && File.Exists(ModelFace)) _netFaceDetect = CvDnn.ReadNetFromCaffe(ProtoFace, ModelFace); } catch (Exception ex) { Debug.WriteLine($"Face detect load: {ex.Message}"); }
+                }
+                if (_netOpenFace == null)
+                {
+                    try { if (File.Exists(ModelOpenFace)) _netOpenFace = CvDnn.ReadNetFromTorch(ModelOpenFace); } catch (Exception ex) { Debug.WriteLine($"OpenFace load: {ex.Message}"); }
+                }
+            }
+        }
 
-                try { if (File.Exists(ProtoFace) && File.Exists(ModelFace)) _netFaceDetect = CvDnn.ReadNetFromCaffe(ProtoFace, ModelFace); } catch (Exception ex) { Debug.WriteLine($"Face detect load: {ex.Message}"); }
-                try { if (File.Exists(ModelOpenFace)) _netOpenFace = CvDnn.ReadNetFromTorch(ModelOpenFace); } catch (Exception ex) { Debug.WriteLine($"OpenFace load: {ex.Message}"); }
-                try { if (File.Exists(ProtoPose) && File.Exists(ModelPose)) _netPose = CvDnn.ReadNetFromCaffe(ProtoPose, ModelPose); } catch (Exception ex) { Debug.WriteLine($"Pose load: {ex.Message}"); }
-                try { if (File.Exists(ProtoScene) && File.Exists(ModelScene)) _netScene = CvDnn.ReadNetFromCaffe(ProtoScene, ModelScene); } catch (Exception ex) { Debug.WriteLine($"Scene load: {ex.Message}"); }
+        private static void EnsurePoseModel()
+        {
+            if (_netPose != null) return;
+            lock (_lock)
+            {
+                if (_netPose == null)
+                {
+                    try { if (File.Exists(ProtoPose) && File.Exists(ModelPose)) _netPose = CvDnn.ReadNetFromCaffe(ProtoPose, ModelPose); } catch (Exception ex) { Debug.WriteLine($"Pose load: {ex.Message}"); }
+                }
+            }
+        }
 
-                _modelsReady = true;
+        private static void EnsureSceneModel()
+        {
+            if (_netScene != null) return;
+            lock (_lock)
+            {
+                if (_netScene == null)
+                {
+                    try { if (File.Exists(ProtoScene) && File.Exists(ModelScene)) _netScene = CvDnn.ReadNetFromCaffe(ProtoScene, ModelScene); } catch (Exception ex) { Debug.WriteLine($"Scene load: {ex.Message}"); }
+                }
             }
         }
 
@@ -190,7 +208,7 @@ namespace PictureManager
         {
             if (feature == null || string.IsNullOrEmpty(file)) return;
 
-            EnsureModels();
+            EnsureFaceModels();
             if (_netFaceDetect == null || _netOpenFace == null)
             {
                 feature.Face = new float[0];
@@ -226,7 +244,7 @@ namespace PictureManager
         {
             if (feature == null || string.IsNullOrEmpty(file)) return;
 
-            EnsureModels();
+            EnsurePoseModel();
             if (_netPose == null)
             {
                 feature.Pose = new float[0];
@@ -262,7 +280,7 @@ namespace PictureManager
         {
             if (feature == null || string.IsNullOrEmpty(file)) return;
 
-            EnsureModels();
+            EnsureSceneModel();
             if (_netScene == null)
             {
                 feature.Scene = new float[0];

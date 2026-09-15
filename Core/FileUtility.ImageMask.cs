@@ -42,7 +42,7 @@ namespace PictureManager
                                 {
                                     float confidence = detections.At<float>(0, 0, i, 2);
 
-                                    if (confidence > 0.5f)
+                                    if (confidence > 0.2f) //0.165-0.5f，数字越小，误判越多
                                     {
                                         int x1 = (int)(detections.At<float>(0, 0, i, 3) * src.Width);
                                         int y1 = (int)(detections.At<float>(0, 0, i, 4) * src.Height);

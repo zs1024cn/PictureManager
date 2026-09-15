@@ -327,6 +327,7 @@ namespace PictureManager
             {
                 using (var compare = new CompareForm(file, outfile))
                 {
+                    FileUtility.ShowCursor();
                     compare.ShowDialog();
                     // 根据返回值处理选中状态
                     switch (compare.AlbumReturnValue)

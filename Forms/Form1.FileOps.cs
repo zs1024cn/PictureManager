@@ -135,6 +135,8 @@ namespace PictureManager
                 string name = dg1.Rows[i].Cells["Name"].Value?.ToString();
                 if (name != null && filesToRemove.Contains(name))
                 {
+                    // 同步移缓存
+                    FeatureCacheManager.Instance.MoveToRecycle(name);
                     dg1.Rows.RemoveAt(i);
                     removed++;
                 }
