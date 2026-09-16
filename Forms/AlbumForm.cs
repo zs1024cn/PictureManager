@@ -830,10 +830,12 @@ namespace PictureManager
         // === 缩略图缓存 ===
         private static Image GetThumbnailInternal(string file, int size)
         {
-            if (_thumbnailCacheFile.TryGetValue(file, out Image thumbnail))
+            string cacheKey = file + "|" + size;
+
+            if (_thumbnailCacheFile.TryGetValue(cacheKey, out Image thumbnail))
             {
                 try { return new Bitmap(thumbnail); }
-                catch { _thumbnailCacheFile.Remove(file); thumbnail = null; }
+                catch { _thumbnailCacheFile.Remove(cacheKey); thumbnail = null; }
             }
 
             thumbnail = FileUtility.ReadPictureToImage(file, size);
@@ -843,9 +845,9 @@ namespace PictureManager
                 using (var temp = new Bitmap(thumbnail))
                     thumbnail = new Bitmap(temp);
 
-                _thumbnailCacheFile[file] = thumbnail;
-                _thumbnailCacheFileOrder.Remove(file);
-                _thumbnailCacheFileOrder.Add(file);
+                _thumbnailCacheFile[cacheKey] = thumbnail;
+                _thumbnailCacheFileOrder.Remove(cacheKey);
+                _thumbnailCacheFileOrder.Add(cacheKey);
                 if (_thumbnailCacheFileOrder.Count > _maxCachedFiles)
                 {
                     string oldest = _thumbnailCacheFileOrder[0];

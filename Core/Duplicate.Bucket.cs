@@ -1,6 +1,7 @@
 ﻿using OpenCvSharp;
 using OpenCvSharp.Features2D;
 using System;
+using System.Diagnostics;
 using System.Linq;
 
 namespace PictureManager
@@ -28,24 +29,54 @@ namespace PictureManager
             return key;
         }
 
-        private static string GetBucketByHash(byte[] hash)
+        public static string GetBucketByHash(byte[] hash)
         {
-            if (hash == null) return "";
+            if (hash == null || hash.Length < 8) return "short";
 
-            string key;
-            if (hash != null && hash.Length >= 8)
+            int blockCount = 8;
+            int blockSize = hash.Length / blockCount;
+            if (blockSize == 0) return "short";
+
+            var sb = new System.Text.StringBuilder();
+
+            double[] blockMeans = new double[blockCount];
+            for (int b = 0; b < blockCount; b++)
             {
-                int step = hash.Length / 8;
-                var sampled = new byte[8];
-                for (int k = 0; k < 8; k++)
-                    sampled[k] = hash[k * step];
-                key = Convert.ToBase64String(sampled);
+                // 每块的均值
+                double sum = 0;
+                for (int i = 0; i < blockSize; i++)
+                    sum += hash[b * blockSize + i];
+                double blockMean = sum / blockSize;
+                blockMeans[b] = blockMean;
+
+                // 量化到 3 档，保留一下，也能找出一些
+                //int q = Math.Min(2, (int)(blockMean / 2));
+                //sb.Append(q);
+                
+                // 量化到 3 档（0-1.5, 1.5-3, 3+）
+                //int q;
+                //if (blockMean < 1.5) q = 0;
+                //else if (blockMean < 3.0) q = 1;
+                //else q = 2;
+                //sb.Append(q);
+
+                // 量化到 4 档（0-1, 1-2, 2-3, 3+）
+                int q;
+                if (blockMean < 1.0) q = 0;
+                else if (blockMean < 2.0) q = 1;
+                else if (blockMean < 3.0) q = 2;
+                else q = 3;
+                sb.Append(q);
             }
-            else
+
+            // 诊断：前几条 hash 的块均值
+            if (_bucketLogCount < 100)
             {
-                key = "short";
+                _bucketLogCount++;
+                //Debug.WriteLine($"[GetBucketByHash] hash.Length={hash.Length}, blockMeans=[{string.Join(",", blockMeans.Select(x => x.ToString("F2")))}]");
             }
-            return key;
+
+            return sb.ToString();  // 3^8 = 6561 种
         }
 
         private static string GetBucketByDct(Mat hist)
@@ -90,8 +121,8 @@ namespace PictureManager
 
             KeyPoint[] kps = sift.Item1;
 
-            // 按 size 降序，取前 6
-            var sorted = kps.OrderByDescending(k => k.Size).Take(6).ToArray();
+            // 按 size 降序，取前 7
+            var sorted = kps.OrderByDescending(k => k.Size).Take(7).ToArray();
             int n = sorted.Length;
             if (n < 2) return "";
 

@@ -36,5 +36,6 @@ namespace PictureManager
         // ========== 参数 ==========
 
         public static string CompareDctMode = "Correl";
+        private static int _bucketLogCount = 0;
     }
 }

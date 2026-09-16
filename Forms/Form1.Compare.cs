@@ -157,6 +157,12 @@ namespace PictureManager
 
             SyncSettingsFromUI();
 
+            // 同步 UI 参数到 comparer 实例
+            if (comparer is DctCompare dct)
+                dct.Mode = cbCompareDctMode.Text;
+            if (comparer is SiftCompare sift)
+                sift.MinMatchPoints = int.Parse(tbSiftMatchPoint.Text);
+
             double threshold = DuplicateSettings.DefaultThreshold;
             string bucketType = cbBucket.Text;
             string mode = _currentCompareMode;

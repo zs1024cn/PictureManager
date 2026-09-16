@@ -30,11 +30,23 @@ namespace PictureManager
             catch { return 0; }
         }
 
-        // SIFT 的相似度是绝对匹配数，用 >= MinMatchPoints 判定
+        // SIFT 相似度是绝对匹配数，用 >= MinMatchPoints 判定
+        // threshold 转换为 matchRatio（Lowe's ratio）
         public override bool IsSimilar(object a, object b, double threshold)
         {
-            double matches = Compare(a, b);
-            return matches >= MinMatchPoints;
+            if (a == null || b == null) return false;
+            var s1 = (Tuple<KeyPoint[], Mat>)a;
+            var s2 = (Tuple<KeyPoint[], Mat>)b;
+            if (s1.Item2 == null || s1.Item2.Empty()) return false;
+            if (s2.Item2 == null || s2.Item2.Empty()) return false;
+
+            try
+            {
+                float matchRatio = 1.5f - (float)threshold;
+                int matches = Duplicate.MatchSiftFeatures(s1.Item2, s2.Item2, matchRatio);
+                return matches >= MinMatchPoints;
+            }
+            catch { return false; }
         }
     }
 }
