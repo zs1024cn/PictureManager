@@ -177,14 +177,21 @@ namespace PictureManager
                 }
             };
 
-            this.Load += (s, e) =>
+            this.Shown += (s, e) =>
             {
-                this.BeginInvoke(new Action(() =>
+                Debug.WriteLine($"[AlbumForm.Shown] 触发, _sourceFiles={_sourceFiles?.Count}");
+                try
                 {
                     LoadImages();
+                    Debug.WriteLine($"[AlbumForm.Shown] LoadImages 完成, _imageFiles={_imageFiles.Count}");
                     CalculateThumbnailSize();
                     ShowPage(0);
-                }));
+                    Debug.WriteLine($"[AlbumForm.Shown] ShowPage 完成");
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[AlbumForm.Shown] 异常: {ex}");
+                }
             };
 
             this.FormClosing += (s, e) =>
@@ -464,6 +471,12 @@ namespace PictureManager
                 _imageFiles = _sourceFiles
                     .Where(f => FileUtility.IsImageFile(Path.GetExtension(f)))
                     .ToList();
+
+                Debug.WriteLine($"[AlbumForm] _sourceFiles={_sourceFiles?.Count}, _imageFiles={_imageFiles.Count}");
+                if (_imageFiles.Count > 0)
+                {
+                    Debug.WriteLine($"[AlbumForm] 第一个: {_imageFiles[0]}");
+                }
             }
             else
             {

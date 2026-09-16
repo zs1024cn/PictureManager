@@ -65,7 +65,7 @@ namespace PictureManager
         /// <summary>
         /// 查找所有重复组（只处理已提取对应特征的图）。
         /// </summary>
-        public List<List<string>> FindAllDuplicates(double threshold, string bucketType = "Allin")
+        public List<List<string>> FindAllDuplicates(double threshold, string bucketType = "Allin", Action<string> progress = null)
         {
             var cache = FeatureCacheManager.Instance;
 
@@ -96,15 +96,21 @@ namespace PictureManager
             var visited = new HashSet<string>();
             var groups = new List<List<string>>();
 
+            int bucketIndex = 0;
+            int totalBuckets = buckets.Count;
             foreach (var bucket in buckets.Values)
             {
+                bucketIndex++;
+                progress?.Invoke($"桶 {bucketIndex}/{totalBuckets}, 桶内 {bucket.Count} 张");
+
                 // 超大桶跳过（避免 O(n²) 爆炸）
-                const int MAX_BUCKET_SIZE = 100;
+                const int MAX_BUCKET_SIZE = 500;
                 if (bucket.Count > MAX_BUCKET_SIZE)
                 {
                     Debug.WriteLine($"跳过超大桶: {bucket.Count} 张");
                     continue;
                 }
+
                 for (int i = 0; i < bucket.Count; i++)
                 {
                     if (visited.Contains(bucket[i])) continue;

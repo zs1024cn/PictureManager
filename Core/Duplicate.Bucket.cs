@@ -1,6 +1,7 @@
 ﻿using OpenCvSharp;
 using OpenCvSharp.Features2D;
 using System;
+using System.Linq;
 
 namespace PictureManager
 {
@@ -85,35 +86,32 @@ namespace PictureManager
         private static string GetBucketBySift(Tuple<KeyPoint[], Mat> sift)
         {
             if (sift == null) return "";
+            if (sift.Item1 == null || sift.Item1.Length < 2) return "";
 
-            Mat desc = sift.Item2;
-            if (desc.Empty()) return "";
+            KeyPoint[] kps = sift.Item1;
 
-            float sum = 0;
-            for (int r = 0; r < desc.Rows; r++)
-                for (int c = 0; c < desc.Cols; c++)
-                    sum += desc.At<float>(r, c);
-            float mean = sum / (desc.Rows * desc.Cols);
+            // 按 size 降序，取前 6
+            var sorted = kps.OrderByDescending(k => k.Size).Take(6).ToArray();
+            int n = sorted.Length;
+            if (n < 2) return "";
 
-            float variance = 0;
-            for (int r = 0; r < desc.Rows; r++)
-                for (int c = 0; c < desc.Cols; c++)
-                {
-                    float diff = desc.At<float>(r, c) - mean;
-                    variance += diff * diff;
-                }
-            variance /= (desc.Rows * desc.Cols);
+            // 相邻点的"相对位置"（4 象限）
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < n - 1; i++)
+            {
+                float dx = sorted[i + 1].Pt.X - sorted[i].Pt.X;
+                float dy = sorted[i + 1].Pt.Y - sorted[i].Pt.Y;
 
-            int kpCount = sift.Item1.Length;
-            int kpBucket = Math.Min(9, kpCount / 5);
+                int quadrant;
+                if (dx >= 0 && dy >= 0) quadrant = 0;   // 右下
+                else if (dx < 0 && dy >= 0) quadrant = 1; // 左下
+                else if (dx < 0 && dy < 0) quadrant = 2;  // 左上
+                else quadrant = 3;                        // 右上
 
-            int meanBucket = (int)(mean * 1000) % 10;
-            if (meanBucket < 0) meanBucket = 0;
+                sb.Append(quadrant);
+            }
 
-            int varBucket = (int)(variance * 1000) % 10;
-            if (varBucket < 0) varBucket = 0;
-
-            return $"{kpBucket:D1}{meanBucket:D1}{varBucket:D1}";
+            return sb.ToString();  // 4^(n-1) 种
         }
     }
 }

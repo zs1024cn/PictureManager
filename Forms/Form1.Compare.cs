@@ -169,7 +169,19 @@ namespace PictureManager
                 List<List<string>> groups;
                 try
                 {
-                    groups = comparer.FindAllDuplicates(threshold, bucketType);
+                    groups = comparer.FindAllDuplicates(threshold, bucketType, (msg) =>
+                    {
+
+                        BeginInvoke(new Action(() =>
+                        {
+                            this.toolStripStatusLabelStatus.Text = $"{mode} 查重 {msg}";
+                        }));
+                    });
+                    Debug.WriteLine($"[CompareAll] groups={groups.Count}");
+                    foreach (var g in groups.Take(3))
+                    {
+                        Debug.WriteLine($"[CompareAll] group: {string.Join(",", g)}");
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -199,8 +211,9 @@ namespace PictureManager
                         MessageBox.Show("没有找到重复组");
                         return;
                     }
-
+                    Debug.WriteLine($"[CompareAll] ShowGroupsPictures...");
                     ShowGroupsPictures(groups);
+                    Debug.WriteLine($"[CompareAll] ShowGroupsPictures done");
                 }));
             }, token);
         }
