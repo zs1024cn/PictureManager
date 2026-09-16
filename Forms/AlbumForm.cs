@@ -62,17 +62,21 @@ namespace PictureManager
             InitCommon(mainForm);
             _sourceFiles = files;
 
-            // 从文件列表推断目录
             var dirs = files.Select(f => Path.GetDirectoryName(f)).Distinct().ToList();
             if (dirs.Count == 1)
             {
                 _directory = dirs[0];
-                AddDeleteByTagButton();  // 单目录时自动分词
+                AddDeleteByTagButton();
             }
             else
             {
                 _directory = "多目录预览";
             }
+
+            // 直接加载（构造时已 InitializeComponent，控件已创建）
+            LoadImages();
+            CalculateThumbnailSize();
+            ShowPage(0);
         }
 
         public void InitCommon(Form1 mainForm)
@@ -174,23 +178,6 @@ namespace PictureManager
                     _previewBox.Visible = false;
                     _previewBox.Image = null;
                     return;
-                }
-            };
-
-            this.Shown += (s, e) =>
-            {
-                Debug.WriteLine($"[AlbumForm.Shown] 触发, _sourceFiles={_sourceFiles?.Count}");
-                try
-                {
-                    LoadImages();
-                    Debug.WriteLine($"[AlbumForm.Shown] LoadImages 完成, _imageFiles={_imageFiles.Count}");
-                    CalculateThumbnailSize();
-                    ShowPage(0);
-                    Debug.WriteLine($"[AlbumForm.Shown] ShowPage 完成");
-                }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine($"[AlbumForm.Shown] 异常: {ex}");
                 }
             };
 

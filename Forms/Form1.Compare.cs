@@ -146,7 +146,7 @@ namespace PictureManager
         /// <summary>
         /// 用当前模式查找重复组。
         /// </summary>
-        private async Task CompareAllAsync(CancellationToken token)
+        private void CompareAll()
         {
             var comparer = PictureCompareManager.Get(_currentCompareMode);
             if (comparer == null)
@@ -163,7 +163,7 @@ namespace PictureManager
 
             this.toolStripStatusLabelStatus.Text = $"开始 {mode} 查重（分桶：{bucketType}）...";
 
-            await Task.Run(() =>
+            Task.Run(() =>
             {
                 DateTime d0 = DateTime.Now;
                 List<List<string>> groups;
@@ -171,32 +171,17 @@ namespace PictureManager
                 {
                     groups = comparer.FindAllDuplicates(threshold, bucketType, (msg) =>
                     {
-
                         BeginInvoke(new Action(() =>
                         {
                             this.toolStripStatusLabelStatus.Text = $"{mode} 查重 {msg}";
                         }));
                     });
-                    Debug.WriteLine($"[CompareAll] groups={groups.Count}");
-                    foreach (var g in groups.Take(3))
-                    {
-                        Debug.WriteLine($"[CompareAll] group: {string.Join(",", g)}");
-                    }
                 }
                 catch (Exception ex)
                 {
                     BeginInvoke(new Action(() =>
                     {
                         MessageBox.Show($"查重失败: {ex.Message}");
-                    }));
-                    return;
-                }
-
-                if (token.IsCancellationRequested)
-                {
-                    BeginInvoke(new Action(() =>
-                    {
-                        this.toolStripStatusLabelStatus.Text = $"{mode} 查重已取消";
                     }));
                     return;
                 }
@@ -211,11 +196,10 @@ namespace PictureManager
                         MessageBox.Show("没有找到重复组");
                         return;
                     }
-                    Debug.WriteLine($"[CompareAll] ShowGroupsPictures...");
+
                     ShowGroupsPictures(groups);
-                    Debug.WriteLine($"[CompareAll] ShowGroupsPictures done");
                 }));
-            }, token);
+            });
         }
         /// <summary>
         /// 把 UI 控件的值同步到 DuplicateSettings
@@ -337,16 +321,8 @@ namespace PictureManager
             }
         }
 
-        private async void btnCompare_Click(object sender, EventArgs e)
+        private void btnCompare_Click(object sender, EventArgs e)
         {
-            // 已在执行 → 点停止
-            if (_compareCts != null && !_compareCts.IsCancellationRequested)
-            {
-                _compareCts.Cancel();
-                return;
-            }
-
-            // 检查是否有图提取了当前模式对应的特征
             string mode = _currentCompareMode;
             int readyCount = 0;
             var cache = FeatureCacheManager.Instance;
@@ -373,30 +349,14 @@ namespace PictureManager
                 return;
             }
 
-            // 开始新任务
-            string originalText = btnCompare.Text;
-            _compareCts = new CancellationTokenSource();
-
-            btnCompare.Text = "■";
-            btnCompare.Enabled = true;
-
+            btnCompare.Enabled = false;
             try
             {
-                await CompareAllAsync(_compareCts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                // 已取消
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"查重失败: {ex.Message}");
+                CompareAll();
             }
             finally
             {
-                btnCompare.Text = originalText;
-                _compareCts.Dispose();
-                _compareCts = null;
+                btnCompare.Enabled = true;
             }
         }
         private void btnWorkflow_MouseDown(object sender, MouseEventArgs e)

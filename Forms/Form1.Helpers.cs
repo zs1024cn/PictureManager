@@ -224,12 +224,16 @@ namespace PictureManager
 
         private void ShowGroupsPictures(List<List<string>> groups)
         {
+            Debug.WriteLine($"[ShowGroupsPictures] groups={groups.Count}");
+
             var allFiles = new List<string>();
             foreach (var group in groups)
             {
                 foreach (string file in group)
                     allFiles.Add(file);
             }
+
+            Debug.WriteLine($"[ShowGroupsPictures] allFiles(去重前)={allFiles.Count}");
 
             if (allFiles.Count == 0)
             {
@@ -238,19 +242,24 @@ namespace PictureManager
             }
 
             allFiles = allFiles.Distinct().ToList();
+            Debug.WriteLine($"[ShowGroupsPictures] allFiles(去重后)={allFiles.Count}, 调用 ShowAlbum");
             ShowAlbum(allFiles);
+            Debug.WriteLine($"[ShowGroupsPictures] ShowAlbum 返回");
         }
-
 
         private void ShowAlbum(List<string> dirFiles, List<string> selectedFiles = null)
         {
+            Debug.WriteLine($"[ShowAlbum] dirFiles={dirFiles.Count}");
             if (dirFiles.Count == 0) return;
 
             FileUtility.ShowCursor();
             try
             {
+                Debug.WriteLine($"[ShowAlbum] 创建 AlbumForm...");
                 using (var album = new AlbumForm(dirFiles, this))
                 {
+                    Debug.WriteLine($"[ShowAlbum] AlbumForm 创建成功");
+                    Debug.WriteLine($"[ShowAlbum] 设置属性...");
                     album.FilesDeleted += (deletedFiles) =>
                     {
                         RemoveDatagridRowsByNames(deletedFiles);
@@ -260,7 +269,9 @@ namespace PictureManager
                     if (selectedFiles != null)
                         album.SetSelectedFiles(selectedFiles);
 
+                    Debug.WriteLine($"[ShowAlbum] 调用 ShowDialog...");
                     album.ShowDialog(this);
+                    Debug.WriteLine($"[ShowAlbum] ShowDialog 返回");
                     if (album.ReturnValue == "F3")
                         DeleteDirectoryFiles(true);
                     else if (album.ReturnValue == "Select")
@@ -271,8 +282,9 @@ namespace PictureManager
             {
                 Debug.WriteLine($"AlbumForm 异常: {ex.Message}");
             }
-
+            Debug.WriteLine("[ShowAlbum] 调用 ShowPicture...");
             ShowPicture();
+            Debug.WriteLine("[ShowAlbum] ShowPicture 返回");
         }
         private void DctPicture(string rowID, OpenCvSharp.Mat hist)
         {
