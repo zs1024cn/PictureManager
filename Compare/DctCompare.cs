@@ -43,30 +43,34 @@ namespace PictureManager
             Mat m1 = (Mat)a, m2 = (Mat)b;
             if (m1.Empty() || m2.Empty()) return false;
 
+            // UI 阈值 → DCT 阈值（线性映射）
+            // UI 0.7 → DCT 0.9
+            // UI 0.9 → DCT 0.97
+            double dctThreshold = 0.9 + (threshold - 0.7) * 0.35;
+
             try
             {
                 switch (Mode)
                 {
                     case "Correl":
-                        return Cv2.CompareHist(m1, m2, HistCompMethods.Correl) >= threshold;
-
+                        return Cv2.CompareHist(m1, m2, HistCompMethods.Correl) >= dctThreshold;
                     case "Chisqr":
-                        return Cv2.CompareHist(m1, m2, HistCompMethods.Chisqr) < (1 - threshold) * 500;
-
+                        {
+                            double c1 = Cv2.CompareHist(m1, m2, HistCompMethods.Chisqr);
+                            double c2 = Cv2.CompareHist(m1, m2, HistCompMethods.ChisqrAlt);
+                            return c1 < (1 - dctThreshold) * 500 || c2 < (1 - dctThreshold) * 500 || c2 < 10;
+                        }
                     case "Bhattacharyya":
                         {
                             double s = Cv2.CompareHist(m1, m2, HistCompMethods.Bhattacharyya);
-                            return s < (1 - threshold) || s < 0.1;
+                            return s < (1 - dctThreshold) || s < 0.1;
                         }
-
                     case "Hellinger":
-                        return Cv2.CompareHist(m1, m2, HistCompMethods.Hellinger) < (1 - threshold);
-
+                        return Cv2.CompareHist(m1, m2, HistCompMethods.Hellinger) < (1 - dctThreshold);
                     case "KLDiv":
-                        return Cv2.CompareHist(m1, m2, HistCompMethods.KLDiv) < 1 - threshold;
-
+                        return Cv2.CompareHist(m1, m2, HistCompMethods.KLDiv) < 1 - dctThreshold;
                     default:
-                        return Cv2.CompareHist(m1, m2, HistCompMethods.Correl) >= threshold;
+                        return Cv2.CompareHist(m1, m2, HistCompMethods.Correl) >= dctThreshold;
                 }
             }
             catch { return false; }

@@ -42,10 +42,35 @@ namespace PictureManager
                     Cv2.CvtColor(src, gray, ColorConversionCodes.BGR2GRAY);
                     Cv2.Resize(gray, gray, new OpenCvSharp.Size(iSize, iSize));
 
+                    // 找 min / max
+                    byte minVal = 255, maxVal = 0;
+                    for (int x = 0; x < iSize; x++)
+                    {
+                        for (int y = 0; y < iSize; y++)
+                        {
+                            byte v = gray.At<byte>(y, x);
+                            if (v < minVal) minVal = v;
+                            if (v > maxVal) maxVal = v;
+                        }
+                    }
+
+                    // range / iGray = 每级大小
+                    double range = maxVal - minVal;
+                    double iInterval = range / iGray;
+                    if (iInterval < 1) iInterval = 1;  // 防止除 0
+
                     byte[] bFeatures = new byte[iSize * iSize];
                     for (int x = 0; x < iSize; x++)
+                    {
                         for (int y = 0; y < iSize; y++)
-                            bFeatures[x * iSize + y] = (byte)(gray.At<byte>(y, x) / iGray);
+                        {
+                            byte v = gray.At<byte>(y, x);
+                            int bucket = (int)((v - minVal) / iInterval);
+                            if (bucket > iGray) bucket = iGray;
+                            if (bucket < 0) bucket = 0;
+                            bFeatures[x * iSize + y] = (byte)bucket;
+                        }
+                    }
                     return bFeatures;
                 }
             }
@@ -273,6 +298,14 @@ namespace PictureManager
                 case 1: cropArea = new Rect(0, 0, iCropWidth, iCropHeight); break;
                 case 2: cropArea = new Rect(src.Width - iCropWidth, 0, iCropWidth, iCropHeight); break;
                 case 3: cropArea = new Rect(0, src.Height - iCropHeight, iCropWidth, iCropHeight); break;
+                case 4: cropArea = new Rect(src.Width - iCropWidth, src.Height - iCropHeight, iCropWidth, iCropHeight); break;
+                case 5:  // 中心 1/2
+                    {
+                        int cw = src.Width / 2;
+                        int ch = src.Height / 2;
+                        cropArea = new Rect(src.Width / 4, src.Height / 4, cw, ch);
+                    }
+                    break;
                 default: cropArea = new Rect(src.Width - iCropWidth, src.Height - iCropHeight, iCropWidth, iCropHeight); break;
             }
 

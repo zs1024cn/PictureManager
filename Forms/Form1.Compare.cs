@@ -233,6 +233,7 @@ namespace PictureManager
 
             // 分桶
             DuplicateSettings.BucketType = cbBucket.Text;
+            if (int.TryParse(tbMaxBucketLimit.Text, out int maxBucket)) DuplicateSettings.MaxBucketLimit = maxBucket;
         }
         /// <summary>
         /// 切换对比算法

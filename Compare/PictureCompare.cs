@@ -104,8 +104,7 @@ namespace PictureManager
                 progress?.Invoke($"桶 {bucketIndex}/{totalBuckets}, 桶内 {bucket.Count} 张");
 
                 // 超大桶跳过（避免 O(n²) 爆炸）
-                const int MAX_BUCKET_SIZE = 500;
-                if (bucket.Count > MAX_BUCKET_SIZE)
+                if (bucket.Count > DuplicateSettings.MaxBucketLimit)
                 {
                     Debug.WriteLine($"跳过超大桶: {bucket.Count} 张");
                     continue;

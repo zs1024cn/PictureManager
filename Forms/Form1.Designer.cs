@@ -67,6 +67,8 @@ namespace PictureManager
             this.btnDirectory = new System.Windows.Forms.Button();
             this.btnCalc = new System.Windows.Forms.Button();
             this.tabDup = new System.Windows.Forms.TabPage();
+            this.tbMaxBucketLimit = new System.Windows.Forms.TextBox();
+            this.label22 = new System.Windows.Forms.Label();
             this.tbSiftMatchPoint = new System.Windows.Forms.TextBox();
             this.label21 = new System.Windows.Forms.Label();
             this.tbSiftFeatures = new System.Windows.Forms.TextBox();
@@ -313,7 +315,7 @@ namespace PictureManager
             this.tbGray.Size = new System.Drawing.Size(105, 26);
             this.tbGray.TabIndex = 111;
             this.tbGray.Tag = "";
-            this.tbGray.Text = "50";
+            this.tbGray.Text = "10";
             this.tbGray.TextChanged += new System.EventHandler(this.tbGray_TextChanged);
             // 
             // tbHashRatio
@@ -321,9 +323,9 @@ namespace PictureManager
             this.tbHashRatio.BackColor = System.Drawing.Color.White;
             this.tbHashRatio.Font = new System.Drawing.Font("黑体", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.tbHashRatio.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
-            this.tbHashRatio.Location = new System.Drawing.Point(15, 535);
+            this.tbHashRatio.Location = new System.Drawing.Point(100, 503);
             this.tbHashRatio.Name = "tbHashRatio";
-            this.tbHashRatio.Size = new System.Drawing.Size(188, 26);
+            this.tbHashRatio.Size = new System.Drawing.Size(103, 26);
             this.tbHashRatio.TabIndex = 112;
             this.tbHashRatio.Tag = "";
             this.tbHashRatio.Text = "0.9";
@@ -348,7 +350,7 @@ namespace PictureManager
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(85, 19);
             this.label2.TabIndex = 119;
-            this.label2.Text = "颜色切割";
+            this.label2.Text = "颜色分级";
             // 
             // label3
             // 
@@ -370,7 +372,8 @@ namespace PictureManager
             "左上",
             "右上",
             "左下",
-            "右下"});
+            "右下",
+            "中心"});
             this.cbCrop.Location = new System.Drawing.Point(98, 6);
             this.cbCrop.Name = "cbCrop";
             this.cbCrop.Size = new System.Drawing.Size(105, 27);
@@ -553,6 +556,8 @@ namespace PictureManager
             // 
             // tabDup
             // 
+            this.tabDup.Controls.Add(this.tbMaxBucketLimit);
+            this.tabDup.Controls.Add(this.label22);
             this.tabDup.Controls.Add(this.btnNameSize);
             this.tabDup.Controls.Add(this.btnClearGarbage);
             this.tabDup.Controls.Add(this.tbSiftMatchPoint);
@@ -584,6 +589,29 @@ namespace PictureManager
             this.tabDup.TabIndex = 1;
             this.tabDup.Text = "查重";
             this.tabDup.UseVisualStyleBackColor = true;
+            // 
+            // tbMaxBucketLimit
+            // 
+            this.tbMaxBucketLimit.BackColor = System.Drawing.Color.White;
+            this.tbMaxBucketLimit.Font = new System.Drawing.Font("黑体", 12F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.tbMaxBucketLimit.ForeColor = System.Drawing.SystemColors.ActiveCaptionText;
+            this.tbMaxBucketLimit.Location = new System.Drawing.Point(126, 540);
+            this.tbMaxBucketLimit.Name = "tbMaxBucketLimit";
+            this.tbMaxBucketLimit.Size = new System.Drawing.Size(77, 26);
+            this.tbMaxBucketLimit.TabIndex = 147;
+            this.tbMaxBucketLimit.Tag = "";
+            this.tbMaxBucketLimit.Text = "500";
+            // 
+            // label22
+            // 
+            this.label22.AutoSize = true;
+            this.label22.BackColor = System.Drawing.SystemColors.ButtonFace;
+            this.label22.ForeColor = System.Drawing.Color.Black;
+            this.label22.Location = new System.Drawing.Point(11, 541);
+            this.label22.Name = "label22";
+            this.label22.Size = new System.Drawing.Size(104, 19);
+            this.label22.TabIndex = 148;
+            this.label22.Text = "超大桶限制";
             // 
             // tbSiftMatchPoint
             // 
@@ -1326,6 +1354,8 @@ namespace PictureManager
         private System.Windows.Forms.Label labelDBRecords;
         private System.Windows.Forms.Button btnClearGarbage;
         private System.Windows.Forms.Button btnNameSize;
+        private System.Windows.Forms.TextBox tbMaxBucketLimit;
+        private System.Windows.Forms.Label label22;
     }
 }
 

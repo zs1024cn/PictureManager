@@ -29,5 +29,7 @@
 
         // 分桶参数
         public static string BucketType = "Hash";
+        // 分桶上限
+        public static int MaxBucketLimit = 500;
     }
 }
