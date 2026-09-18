@@ -1,6 +1,9 @@
 ﻿//git reset --hard <commit-hash>
 //git diff id0 id1 > changes.txt
 //git apply changes.txt
+//git add .
+//git commit -m "描述本次改动"
+//git push
 using CefSharp;
 using CefSharp.DevTools.Browser;
 using CefSharp.DevTools.Debugger;
