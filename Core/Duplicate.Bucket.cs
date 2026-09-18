@@ -36,24 +36,18 @@ namespace PictureManager
             int blockSize = hash.Length / blockCount;
             if (blockSize == 0) return "short";
 
-            // 找出 hash 的"最大值"（用于动态量化）
-            byte maxVal = 0;
-            for (int i = 0; i < hash.Length; i++)
-                if (hash[i] > maxVal) maxVal = hash[i];
-            if (maxVal == 0) maxVal = 1;
+            // 固定 step，基于 HashGray（与 ExtractHashByMat 一致）
+            double step = DuplicateSettings.HashGray / 4.0;
+            if (step < 1) step = 1;
 
             var sb = new System.Text.StringBuilder();
-
             for (int b = 0; b < blockCount; b++)
             {
-                // 每块的均值
                 double sum = 0;
                 for (int i = 0; i < blockSize; i++)
                     sum += hash[b * blockSize + i];
                 double blockMean = sum / blockSize;
 
-                // 按"最大值的 4 档"量化
-                double step = maxVal / 4.0;
                 int q;
                 if (blockMean < step * 1) q = 0;
                 else if (blockMean < step * 2) q = 1;
@@ -61,7 +55,6 @@ namespace PictureManager
                 else q = 3;
                 sb.Append(q);
             }
-
             return sb.ToString();
         }
         public static string GetBucketByHash_bak(byte[] hash)

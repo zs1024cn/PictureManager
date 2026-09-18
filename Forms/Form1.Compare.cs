@@ -146,13 +146,13 @@ namespace PictureManager
         /// <summary>
         /// 用当前模式查找重复组。
         /// </summary>
-        private void CompareAll()
+        private Task CompareAll()
         {
             var comparer = PictureCompareManager.Get(_currentCompareMode);
             if (comparer == null)
             {
                 MessageBox.Show($"未找到对比器: {_currentCompareMode}");
-                return;
+                return Task.CompletedTask;
             }
 
             SyncSettingsFromUI();
@@ -169,7 +169,7 @@ namespace PictureManager
 
             this.toolStripStatusLabelStatus.Text = $"开始 {mode} 查重（分桶：{bucketType}）...";
 
-            Task.Run(() =>
+            return Task.Run(() =>
             {
                 DateTime d0 = DateTime.Now;
                 List<List<string>> groups;
@@ -328,7 +328,7 @@ namespace PictureManager
             }
         }
 
-        private void btnCompare_Click(object sender, EventArgs e)
+        private async void btnCompare_Click(object sender, EventArgs e)
         {
             string mode = _currentCompareMode;
             int readyCount = 0;
@@ -359,7 +359,7 @@ namespace PictureManager
             btnCompare.Enabled = false;
             try
             {
-                CompareAll();
+                await CompareAll();
             }
             finally
             {

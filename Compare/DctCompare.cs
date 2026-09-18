@@ -47,6 +47,8 @@ namespace PictureManager
             // UI 0.7 → DCT 0.9
             // UI 0.9 → DCT 0.97
             double dctThreshold = 0.9 + (threshold - 0.7) * 0.35;
+            if (dctThreshold > 0.99) dctThreshold = 0.99;
+            if (dctThreshold < 0.5) dctThreshold = 0.5;
 
             try
             {
@@ -58,7 +60,7 @@ namespace PictureManager
                         {
                             double c1 = Cv2.CompareHist(m1, m2, HistCompMethods.Chisqr);
                             double c2 = Cv2.CompareHist(m1, m2, HistCompMethods.ChisqrAlt);
-                            return c1 < (1 - dctThreshold) * 500 || c2 < (1 - dctThreshold) * 500 || c2 < 10;
+                            return c1 < (1 - dctThreshold) * 500 || c2 < (1 - dctThreshold) * 500;
                         }
                     case "Bhattacharyya":
                         {
