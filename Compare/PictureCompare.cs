@@ -3,6 +3,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 
 namespace PictureManager
 {
@@ -30,58 +32,46 @@ namespace PictureManager
         public List<string> FindSimilar(string targetFile, double threshold, string bucketType = "Allin")
         {
             var result = new List<string>();
+            var resultLock = new object();
             var cache = FeatureCacheManager.Instance;
 
             var target = cache.GetOrExtract(targetFile, Name);
-            if (target == null)
-            {
-                Debug.WriteLine($"[FindSimilar:{Name}] target null, file={targetFile}");
-                return result;
-            }
+            if (target == null) { Debug.WriteLine($"[FindSimilar:{Name}] target null"); return result; }
 
             object targetFeature = GetFeature(target);
-            if (targetFeature == null)
-            {
-                Debug.WriteLine($"[FindSimilar:{Name}] targetFeature null");
-                return result;
-            }
+            if (targetFeature == null) { Debug.WriteLine($"[FindSimilar:{Name}] targetFeature null"); return result; }
 
             int total = 0, checkedCount = 0, skippedNull = 0;
-            foreach (var kvp in cache.GetAll())
-            {
-                total++;
-                if (kvp.Key == targetFile) continue;
+            var allItems = cache.GetAll().ToList();   // ★ 快照，避免并行时枚举器冲突
 
-                object otherFeature = GetFeature(kvp.Value);
-                if (otherFeature == null) { skippedNull++; continue; }
-                if (otherFeature is float[] fa && fa.Length == 0) { skippedNull++; continue; }
-
-                checkedCount++;
-                try
+            Parallel.ForEach(allItems,
+                new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                kvp =>
                 {
-                    // ★★★ M218：只针对 Hash，只打前 5 张 ★★★
-                    if (Name == "Hash" && checkedCount <= 5)
+                    Interlocked.Increment(ref total);
+                    if (kvp.Key == targetFile) return;
+
+                    object otherFeature = GetFeature(kvp.Value);
+                    if (otherFeature == null) { Interlocked.Increment(ref skippedNull); return; }
+                    if (otherFeature is float[] fa && fa.Length == 0) { Interlocked.Increment(ref skippedNull); return; }
+
+                    Interlocked.Increment(ref checkedCount);
+                    try
                     {
-                        byte[] t = (byte[])targetFeature;
-                        byte[] o = (byte[])otherFeature;
-                        Debug.WriteLine($"[Hash] t.len={t.Length}, o.len={o.Length}, " +
-                            $"t[0..5]={string.Join(",", t.Take(5))}, " +
-                            $"o[0..5]={string.Join(",", o.Take(5))}, " +
-                            $"cmp={Compare(targetFeature, otherFeature):F4}");
+                        if (IsSimilar(targetFeature, otherFeature, threshold))
+                        {
+                            lock (resultLock) result.Add(kvp.Key);
+                        }
                     }
+                    catch { }
+                });
 
-                    if (IsSimilar(targetFeature, otherFeature, threshold))
-                        result.Add(kvp.Key);
-                }
-                catch { }
-            }
-
-            Debug.WriteLine($"[FindSimilar:{Name}] total={total}, checked={checkedCount}, skippedNull={skippedNull}, hits={result.Count}, targetType={targetFeature?.GetType().Name}");
+            Debug.WriteLine($"[FindSimilar:{Name}] total={total}, checked={checkedCount}, skippedNull={skippedNull}, hits={result.Count}");
             return result;
         }
-
         /// <summary>
         /// 查找所有重复组（只处理已提取对应特征的图）。
+        /// M250：桶间串行 + 桶内并行 + 连通分量分组 + 进度限频。
         /// </summary>
         public List<List<string>> FindAllDuplicates(double threshold, string bucketType = "Allin", Action<string> progress = null)
         {
@@ -111,7 +101,6 @@ namespace PictureManager
 
             Debug.WriteLine($"FindAllDuplicates [{Name}] bucket={bucketType}: 有效文件 {files.Count}, 桶数 {buckets.Count}, 最大桶 {(buckets.Count > 0 ? buckets.Values.Max(b => b.Count) : 0)}");
 
-            var visited = new HashSet<string>();
             var groups = new List<List<string>>();
 
             int bucketIndex = 0;
@@ -119,45 +108,106 @@ namespace PictureManager
             foreach (var bucket in buckets.Values)
             {
                 bucketIndex++;
-                progress?.Invoke($"桶 {bucketIndex}/{totalBuckets}, 桶内 {bucket.Count} 张");
+                if (bucketIndex % 20 == 0 || bucketIndex == totalBuckets)
+                    progress?.Invoke($"桶 {bucketIndex}/{totalBuckets}, 桶内 {bucket.Count} 张");
 
-                // 超大桶跳过（避免 O(n²) 爆炸）
-                if (bucket.Count > DuplicateSettings.MaxBucketLimit)
+                if (bucket.Count > DuplicateSettings.MaxBucketLimit) continue;
+
+                if (Name == "SIFT")
                 {
-                    Debug.WriteLine($"跳过超大桶: {bucket.Count} 张");
-                    continue;
-                }
+                    // ★ M244 贪心版（11 秒）
+                    var localVisited = new HashSet<string>();
+                    var localGroups = new List<List<string>>();
+                    var localLock = new object();
 
-                for (int i = 0; i < bucket.Count; i++)
-                {
-                    if (visited.Contains(bucket[i])) continue;
-
-                    var feature1 = GetFeature(cache.GetAll()[bucket[i]]);
-                    if (feature1 == null) continue;
-
-                    var group = new List<string> { bucket[i] };
-                    visited.Add(bucket[i]);
-
-                    for (int j = i + 1; j < bucket.Count; j++)
-                    {
-                        if (visited.Contains(bucket[j])) continue;
-
-                        var feature2 = GetFeature(cache.GetAll()[bucket[j]]);
-                        if (feature2 == null) continue;
-
-                        try
+                    Parallel.For(0, bucket.Count,
+                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                        i =>
                         {
-                            if (IsSimilar(feature1, feature2, threshold))
+                            lock (localLock) { if (localVisited.Contains(bucket[i])) return; }
+
+                            var feature1 = GetFeature(cache.GetAll()[bucket[i]]);
+                            if (feature1 == null) return;
+
+                            var group = new List<string> { bucket[i] };
+                            lock (localLock) { localVisited.Add(bucket[i]); }
+
+                            for (int j = i + 1; j < bucket.Count; j++)
                             {
-                                group.Add(bucket[j]);
-                                visited.Add(bucket[j]);
+                                lock (localLock) { if (localVisited.Contains(bucket[j])) continue; }
+
+                                var feature2 = GetFeature(cache.GetAll()[bucket[j]]);
+                                if (feature2 == null) continue;
+
+                                try
+                                {
+                                    if (IsSimilar(feature1, feature2, threshold))
+                                    {
+                                        group.Add(bucket[j]);
+                                        lock (localLock) { localVisited.Add(bucket[j]); }
+                                    }
+                                }
+                                catch { }
+                            }
+
+                            if (group.Count > 1)
+                                lock (localLock) { localGroups.Add(group); }
+                        });
+
+                    groups.AddRange(localGroups);
+                }
+                else
+                {
+                    // ★ M250 连通分量版（Hash/DCT 用）
+                    int n = bucket.Count;
+                    var features = new object[n];
+                    for (int i = 0; i < n; i++)
+                        features[i] = GetFeature(cache.GetAll()[bucket[i]]);
+
+                    var adj = new bool[n, n];
+                    Parallel.For(0, n,
+                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                        i =>
+                        {
+                            if (features[i] == null) return;
+                            for (int j = i + 1; j < n; j++)
+                            {
+                                if (features[j] == null) continue;
+                                try
+                                {
+                                    if (IsSimilar(features[i], features[j], threshold))
+                                    {
+                                        adj[i, j] = true;
+                                        adj[j, i] = true;
+                                    }
+                                }
+                                catch { }
+                            }
+                        });
+
+                    var visitedLocal = new bool[n];
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (visitedLocal[i]) continue;
+                        var group = new List<string>();
+                        var queue = new Queue<int>();
+                        queue.Enqueue(i);
+                        visitedLocal[i] = true;
+                        while (queue.Count > 0)
+                        {
+                            int cur = queue.Dequeue();
+                            group.Add(bucket[cur]);
+                            for (int k = 0; k < n; k++)
+                            {
+                                if (!visitedLocal[k] && adj[cur, k])
+                                {
+                                    visitedLocal[k] = true;
+                                    queue.Enqueue(k);
+                                }
                             }
                         }
-                        catch { }
+                        if (group.Count > 1) groups.Add(group);
                     }
-
-                    if (group.Count > 1)
-                        groups.Add(group);
                 }
             }
 
