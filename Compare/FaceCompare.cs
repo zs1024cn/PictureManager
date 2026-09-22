@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Compare\FaceCompare.cs
+using System;
 
 namespace PictureManager
 {

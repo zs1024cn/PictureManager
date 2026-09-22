@@ -1,4 +1,5 @@
-﻿namespace PictureManager
+﻿//Core\GlassMosaicParams.cs
+namespace PictureManager
 {
     /// <summary>
     /// 花玻璃马赛克参数。独立类，方便 EnC 修改。

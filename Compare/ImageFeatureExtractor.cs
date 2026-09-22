@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿//Compare\ImageFeatureExtractor.cs
+using OpenCvSharp;
 using OpenCvSharp.Dnn;
 using System;
 using System.Diagnostics;

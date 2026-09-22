@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿//Core\Duplicate.Cache.cs
+using OpenCvSharp;
 using OpenCvSharp.Features2D;
 using System;
 using System.Collections.Concurrent;

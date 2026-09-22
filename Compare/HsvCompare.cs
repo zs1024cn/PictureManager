@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Compare\HsvCompare.cs
+using System;
 
 namespace PictureManager
 {

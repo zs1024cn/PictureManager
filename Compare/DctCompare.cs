@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿//Compare\DctCompare.cs
+using OpenCvSharp;
 using System;
 
 namespace PictureManager

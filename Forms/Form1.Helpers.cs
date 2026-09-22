@@ -1,4 +1,5 @@
-﻿using LibVLCSharp.Shared;
+﻿//Forms\Form1.Helpers.cs
+using LibVLCSharp.Shared;
 using OpenCvSharp;
 using System;
 using System.Collections;

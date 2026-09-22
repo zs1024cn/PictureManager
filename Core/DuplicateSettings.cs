@@ -1,4 +1,5 @@
-﻿namespace PictureManager
+﻿//Core\DuplicateSettings.cs
+namespace PictureManager
 {
     /// <summary>
     /// 查重参数集中管理。Form1 修改这里，Duplicate 和 Extractor 从这里读。

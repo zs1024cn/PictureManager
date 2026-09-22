@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Core\FileUtility.ImageMask.cs
+using System;
 using System.Diagnostics;
 using System.IO;
 using OpenCvSharp;

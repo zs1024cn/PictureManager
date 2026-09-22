@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿//Forms\CompareForm.cs
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

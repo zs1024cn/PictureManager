@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Compare\PictureCompare.cs
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -31,34 +32,51 @@ namespace PictureManager
             var result = new List<string>();
             var cache = FeatureCacheManager.Instance;
 
-            // 目标图：按算法名补提
             var target = cache.GetOrExtract(targetFile, Name);
-            if (target == null) return result;
+            if (target == null)
+            {
+                Debug.WriteLine($"[FindSimilar:{Name}] target null, file={targetFile}");
+                return result;
+            }
 
             object targetFeature = GetFeature(target);
-            if (targetFeature == null) return result;
+            if (targetFeature == null)
+            {
+                Debug.WriteLine($"[FindSimilar:{Name}] targetFeature null");
+                return result;
+            }
 
-            string targetBucket = Duplicate.GetBucket(bucketType, targetFile);
-
+            int total = 0, checkedCount = 0, skippedNull = 0;
             foreach (var kvp in cache.GetAll())
             {
+                total++;
                 if (kvp.Key == targetFile) continue;
 
-                // 只处理已提取对应特征的图（不主动补提）
                 object otherFeature = GetFeature(kvp.Value);
-                if (otherFeature == null) continue;
-                if (otherFeature is float[] fa && fa.Length == 0) continue;
+                if (otherFeature == null) { skippedNull++; continue; }
+                if (otherFeature is float[] fa && fa.Length == 0) { skippedNull++; continue; }
 
-                string otherBucket = Duplicate.GetBucket(bucketType, kvp.Key);
-                if (otherBucket != targetBucket) continue;
-
+                checkedCount++;
                 try
                 {
+                    // ★★★ M218：只针对 Hash，只打前 5 张 ★★★
+                    if (Name == "Hash" && checkedCount <= 5)
+                    {
+                        byte[] t = (byte[])targetFeature;
+                        byte[] o = (byte[])otherFeature;
+                        Debug.WriteLine($"[Hash] t.len={t.Length}, o.len={o.Length}, " +
+                            $"t[0..5]={string.Join(",", t.Take(5))}, " +
+                            $"o[0..5]={string.Join(",", o.Take(5))}, " +
+                            $"cmp={Compare(targetFeature, otherFeature):F4}");
+                    }
+
                     if (IsSimilar(targetFeature, otherFeature, threshold))
                         result.Add(kvp.Key);
                 }
                 catch { }
             }
+
+            Debug.WriteLine($"[FindSimilar:{Name}] total={total}, checked={checkedCount}, skippedNull={skippedNull}, hits={result.Count}, targetType={targetFeature?.GetType().Name}");
             return result;
         }
 

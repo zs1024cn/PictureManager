@@ -1,9 +1,13 @@
 ﻿//git reset --hard <commit-hash>
 //git diff id0 id1 > changes.txt
 //git apply changes.txt
+
+//发布github
 //git add .
 //git commit -m "描述本次改动"
 //git push
+
+//Forms\Form1.cs
 using CefSharp;
 using CefSharp.DevTools.Browser;
 using CefSharp.DevTools.Debugger;

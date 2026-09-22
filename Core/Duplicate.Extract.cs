@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿//Core\Duplicate.Extract.cs
+using OpenCvSharp;
 using OpenCvSharp.Features2D;
 using OpenCvSharp.XFeatures2D;
 using System;

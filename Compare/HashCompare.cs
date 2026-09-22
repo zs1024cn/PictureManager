@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Compare\HashCompare.cs
+using System;
 
 namespace PictureManager
 {

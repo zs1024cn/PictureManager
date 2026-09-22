@@ -1,4 +1,5 @@
-﻿using CefSharp;
+﻿//Core\Downloader.cs
+using CefSharp;
 using CefSharp.WinForms;
 using PictureManager;
 using System;

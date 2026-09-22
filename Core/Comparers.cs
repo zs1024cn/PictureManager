@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿//Core\Comparers.cs
+using System.Collections;
 using System.IO;
 
 namespace PictureManager

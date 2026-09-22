@@ -1,4 +1,5 @@
-﻿using OpenCvSharp;
+﻿//Compare\SiftCompare.cs
+using OpenCvSharp;
 using System;
 
 namespace PictureManager
@@ -43,7 +44,11 @@ namespace PictureManager
             try
             {
              
-                float matchRatio = 1.2f - (float)threshold * 0.6f;  // 0.5→0.9, 0.9→0.66
+                //float matchRatio = 1.2f - (float)threshold * 0.6f;  // 0.5→0.9, 0.9→0.66
+                float matchRatio = 1.0f - (float)threshold * 0.4f;
+                // 0.5 → 0.80
+                // 0.7 → 0.72   ← 比 0.78 严，预计 33 → 10 左右
+                // 0.9 → 0.64
                 // float matchRatio = 1.5f - (float)threshold;
                 int matches = Duplicate.MatchSiftFeatures(s1.Item2, s2.Item2, matchRatio);
                 return matches >= MinMatchPoints;

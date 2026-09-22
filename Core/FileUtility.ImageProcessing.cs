@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Core\FileUtility.ImageProcessing.cs
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;

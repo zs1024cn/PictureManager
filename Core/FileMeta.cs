@@ -1,4 +1,5 @@
-﻿namespace PictureManager
+﻿//Core\FileMeta.cs
+namespace PictureManager
 {
     /// <summary>
     /// 文件元数据（点赞、踩、视频进度、文本滚动）

@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Compare\FeatureCacheManager.cs
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;

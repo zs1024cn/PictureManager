@@ -1,4 +1,5 @@
-﻿using CefSharp;
+﻿//Forms\Form1.Keyboard.cs
+using CefSharp;
 using OpenCvSharp;
 using System;
 using System.Collections.Generic;
@@ -258,6 +259,7 @@ namespace PictureManager
                 SyncSettingsFromUI();
 
                 double threshold = DuplicateSettings.DefaultThreshold;
+                Debug.WriteLine($"[V] threshold={threshold}, tbHashRatio={tbHashRatio.Text}, DefaultThreshold={DuplicateSettings.DefaultThreshold}");
                 string bucketType = cbBucket.Text;
 
                 var similarFiles = new HashSet<string>();
@@ -270,8 +272,11 @@ namespace PictureManager
 
                     try
                     {
-                        foreach (var f in comparer.FindSimilar(filePath, threshold, bucketType))
-                            similarFiles.Add(f);
+                        //foreach (var f in comparer.FindSimilar(filePath, threshold, bucketType))
+                        //    similarFiles.Add(f);
+                        var list = comparer.FindSimilar(filePath, threshold, bucketType);
+                        Debug.WriteLine($"[V] {name}: {list.Count}");   // ★ 加这行
+                        foreach (var f in list) similarFiles.Add(f);
                     }
                     catch { }
                 }

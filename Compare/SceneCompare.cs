@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Compare\SceneCompare.cs
+using System;
 
 namespace PictureManager
 {

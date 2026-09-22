@@ -1,4 +1,5 @@
-﻿using System;
+﻿//Compare\PoseCompare.cs
+using System;
 
 namespace PictureManager
 {
