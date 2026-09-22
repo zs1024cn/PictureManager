@@ -8,6 +8,7 @@ namespace PictureManager
 {
     public partial class Duplicate
     {
+        private static int _siftLogCount = 0;
         // ========== DCT 比较 ==========
 
         public static bool CompareDct(Mat mat1, Mat mat2, double minRatio, out double correlation)
@@ -71,43 +72,47 @@ namespace PictureManager
         }
 
         // ========== SIFT 匹配 ==========
-
         public static int MatchSiftFeatures(Mat descriptors1, Mat descriptors2, float matchThreshold = 0.75f)
         {
             if (descriptors1.Empty() || descriptors2.Empty()) return 0;
+
+            // ★ 点数少时，暴力匹配比 FLANN 建索引快得多
+            if (descriptors1.Rows <= 100 && descriptors2.Rows <= 100)
+            {
+                return MatchByBF(descriptors1, descriptors2, matchThreshold);
+            }
 
             try
             {
                 using (var matcher = new FlannBasedMatcher())
                 {
                     var matches = matcher.KnnMatch(descriptors1, descriptors2, 2);
-
                     int goodMatches = 0;
                     foreach (var match in matches)
                     {
                         if (match.Length == 2 && match[0].Distance < matchThreshold * match[1].Distance)
-                        {
                             goodMatches++;
-                        }
                     }
                     return goodMatches;
                 }
             }
             catch
             {
-                using (var matcher = new BFMatcher(NormTypes.L2, false))
+                return MatchByBF(descriptors1, descriptors2, matchThreshold);
+            }
+        }
+        private static int MatchByBF(Mat descriptors1, Mat descriptors2, float matchThreshold)
+        {
+            using (var matcher = new BFMatcher(NormTypes.L2, false))
+            {
+                var matches = matcher.KnnMatch(descriptors1, descriptors2, 2);
+                int goodMatches = 0;
+                foreach (var match in matches)
                 {
-                    var matches = matcher.KnnMatch(descriptors1, descriptors2, 2);
-                    int goodMatches = 0;
-                    foreach (var match in matches)
-                    {
-                        if (match.Length == 2 && match[0].Distance < matchThreshold * match[1].Distance)
-                        {
-                            goodMatches++;
-                        }
-                    }
-                    return goodMatches;
+                    if (match.Length == 2 && match[0].Distance < matchThreshold * match[1].Distance)
+                        goodMatches++;
                 }
+                return goodMatches;
             }
         }
     }

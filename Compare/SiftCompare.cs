@@ -1,6 +1,7 @@
 ﻿//Compare\SiftCompare.cs
 using OpenCvSharp;
 using System;
+using System.Diagnostics;
 
 namespace PictureManager
 {
@@ -41,6 +42,8 @@ namespace PictureManager
             if (s1.Item2 == null || s1.Item2.Empty()) return false;
             if (s2.Item2 == null || s2.Item2.Empty()) return false;
 
+            //Debug.WriteLine($"[SIFT] target kp={s1.Item1?.Length}");
+            //Debug.WriteLine($"[SIFT] other kp={s2.Item1?.Length}");
             try
             {
              
