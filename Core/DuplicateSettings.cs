@@ -17,6 +17,7 @@ namespace PictureManager
         // SIFT 参数
         public static int SiftMaxFeatures = 500;
         public static int SiftMaxDim = 800;
+        public static int SiftBFMatcher = 800; //采样点数小于SiftBpMathcer时，用BFMatcher比较，否则用FLANN建立索引。
 
         // SIFT 匹配阈值
         public static int SiftMinMatchPoints = 7;

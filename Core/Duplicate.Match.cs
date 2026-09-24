@@ -77,7 +77,7 @@ namespace PictureManager
             if (descriptors1.Empty() || descriptors2.Empty()) return 0;
 
             // ★ 点数少时，暴力匹配比 FLANN 建索引快得多
-            if (descriptors1.Rows <= 100 && descriptors2.Rows <= 100)
+            if (descriptors1.Rows <= DuplicateSettings.SiftBFMatcher && descriptors2.Rows <= DuplicateSettings.SiftBFMatcher)
             {
                 return MatchByBF(descriptors1, descriptors2, matchThreshold);
             }
