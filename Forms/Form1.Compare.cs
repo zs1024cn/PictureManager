@@ -1,4 +1,5 @@
 ﻿//Forms\Form1.Compare.cs
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -71,6 +72,9 @@ namespace PictureManager
 
                 if (canParallel)
                 {
+                    // ★ 禁用 OpenCV 内部多线程，让外层 Parallel 独占 CPU
+                    //int oldThreads = Cv2.GetNumThreads();
+                    //Cv2.SetNumThreads(1);
                     try
                     {
                         Parallel.ForEach(filesToProcess,
@@ -105,6 +109,10 @@ namespace PictureManager
                     catch (OperationCanceledException)
                     {
                         Debug.WriteLine("提取已取消");
+                    }
+                    finally
+                    {
+                        //Cv2.SetNumThreads(oldThreads);
                     }
                 }
                 else

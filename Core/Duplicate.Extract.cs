@@ -131,15 +131,17 @@ namespace PictureManager
         }
 
 
+        private static int _siftExtractLogCount = 0;
+
         private static Tuple<KeyPoint[], Mat> ExtractSiftFeaturesByMat(Mat mat, string imagePath, int maxFeatures = 500, int maxDim = 800)
         {
             try
             {
-                if (mat == null || mat.Empty())
-                {
-                    Debug.WriteLine($"SIFT 空图: {imagePath}");
-                    return null;
-                }
+                if (mat == null || mat.Empty()) return null;
+
+                var swTotal = Stopwatch.StartNew();
+                var swGray = Stopwatch.StartNew();
+
                 Mat gray;
                 if (mat.Channels() == 1)
                     gray = mat.Clone();
@@ -148,45 +150,52 @@ namespace PictureManager
                     gray = new Mat();
                     Cv2.CvtColor(mat, gray, ColorConversionCodes.BGR2GRAY);
                 }
+                long grayMs = swGray.ElapsedMilliseconds;
 
                 using (gray)
                 {
+                    long resizeMs = 0, siftMs = 0;
+                    KeyPoint[] kp = null;
+                    Mat desc = new Mat();
+
                     if (gray.Width > maxDim || gray.Height > maxDim)
                     {
+                        var swResize = Stopwatch.StartNew();
                         double scale = Math.Min((double)maxDim / gray.Width, (double)maxDim / gray.Height);
                         var resized = new Mat();
                         Cv2.Resize(gray, resized, new OpenCvSharp.Size(gray.Width * scale, gray.Height * scale));
+                        resizeMs = swResize.ElapsedMilliseconds;
+
                         using (resized)
                         {
+                            var swSift = Stopwatch.StartNew();
                             var sift = SIFT.Create(maxFeatures);
-                            KeyPoint[] keypoints;
-                            Mat descriptors = new Mat();
-                            sift.DetectAndCompute(resized, null, out keypoints, descriptors);
-                            if (keypoints.Length == 0)
-                            {
-                                Debug.WriteLine($"SIFT 无关键点: {imagePath}");
-                                return null;
-                            }
-                            return Tuple.Create(keypoints, descriptors);
+                            sift.DetectAndCompute(resized, null, out kp, desc);
+                            siftMs = swSift.ElapsedMilliseconds;
                         }
                     }
-
-                    var sift2 = SIFT.Create(maxFeatures);
-                    KeyPoint[] kp;
-                    Mat desc = new Mat();
-                    sift2.DetectAndCompute(gray, null, out kp, desc);
-                    if (kp.Length == 0)
+                    else
                     {
-                        Debug.WriteLine($"SIFT 无关键点: {imagePath}");
-                        return null;
+                        var swSift = Stopwatch.StartNew();
+                        var sift2 = SIFT.Create(maxFeatures);
+                        sift2.DetectAndCompute(gray, null, out kp, desc);
+                        siftMs = swSift.ElapsedMilliseconds;
                     }
+
+                    swTotal.Stop();
+
+                    if (kp == null || kp.Length == 0) return null;
+
+                    if (_siftExtractLogCount < 20)
+                    {
+                        _siftExtractLogCount++;
+                        Debug.WriteLine($"[SIFT-Extract] total={swTotal.ElapsedMilliseconds}ms, gray={grayMs}ms, resize={resizeMs}ms, sift={siftMs}ms, kp={kp.Length}, img={gray.Width}x{gray.Height}, file={Path.GetFileName(imagePath)}");
+                    }
+
                     return Tuple.Create(kp, desc);
                 }
             }
-            catch
-            {
-                return null;
-            }
+            catch { return null; }
         }
 
         // ========== HSV ==========
