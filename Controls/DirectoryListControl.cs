@@ -15,7 +15,7 @@ namespace PictureManager.Controls
     public partial class DirectoryListControl : UserControl
     {
         private string _jsonPath;
-
+        public string LastFile { get; set; } = "";
         /// <summary>
         /// 获取勾选的目录列表
         /// </summary>
@@ -114,6 +114,7 @@ namespace PictureManager.Controls
                             }
                         }
                     }
+                    LastFile = data?.LastFile ?? "";   // ★ 新增
                 }
             }
             catch (Exception ex)
@@ -142,7 +143,8 @@ namespace PictureManager.Controls
                             Path = path,
                             Checked = clbDirectories.GetItemChecked(index)
                         })
-                        .ToList()
+                        .ToList(),                        
+                    LastFile = this.LastFile   // ★ 新增
                 };
 
                 string json = System.Text.Json.JsonSerializer.Serialize(data, new System.Text.Json.JsonSerializerOptions { WriteIndented = true });
@@ -157,6 +159,7 @@ namespace PictureManager.Controls
         private class DirectoryListData
         {
             public List<DirectoryItem> Directories { get; set; }
+            public string LastFile { get; set; }   // ★ 新增
         }
 
         private class DirectoryItem

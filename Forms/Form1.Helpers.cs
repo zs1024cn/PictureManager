@@ -216,12 +216,11 @@ namespace PictureManager
                 {
                     dg1.CurrentCell = dg1.Rows[r].Cells[0];  // 设置当前行
                     dg1.FirstDisplayedScrollingRowIndex = r;  // 滚动到视野内
+                    dg1.Focus();
                     return;
                 }
             }
         }
-
-
 
         private void ShowGroupsPictures(List<List<string>> groups)
         {
@@ -425,6 +424,9 @@ namespace PictureManager
         }
         private void btnLoadView_Click(object sender, EventArgs e)
         {
+            if (_isFormLoadFinished)
+                SaveLastFile();
+
             _TmpDirectory = this.tbTmpDirectory.Text.Trim();
 
             AlbumForm.Clear();
@@ -500,6 +502,16 @@ namespace PictureManager
 
             this.tabControl1.SelectedTab = this.tabFiles;
             RefreshHashDctSiftCache();
+
+            // ★ 恢复：滚动到上次的文件
+            string lastFile = directoryListControl1.LastFile;
+            if (!string.IsNullOrEmpty(lastFile))
+            {
+                BeginInvoke(new Action(() =>
+                {
+                    DatagridSeekFile(lastFile);
+                }));
+            }
         }
         private void btnClearGarbage_Click(object sender, EventArgs e)
         {
@@ -507,9 +519,6 @@ namespace PictureManager
             DeleteAllGarbage();
             btnClearGarbage.Enabled = true;
         }
-
-
-
 
         private void btnClearDBRecord_Click(object sender, EventArgs e)
         {

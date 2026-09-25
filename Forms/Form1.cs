@@ -97,6 +97,7 @@ namespace PictureManager
 
         private bool _MetaEnabled = true;//是否启动meta,当false时，btnNamesize只检查文件名+size。否则用meta值来判定重复
 
+        private bool _isFormLoadFinished = false;
         // 
         public Form1()
         {
@@ -172,7 +173,7 @@ namespace PictureManager
             });
 
             Debug.WriteLine("ID.SortMode after load:" + this.dg1.Columns["ID"].SortMode.ToString());
-
+            _isFormLoadFinished = true;
         }
 
         private void Form1_Resize(object sender, EventArgs e)
@@ -203,9 +204,21 @@ namespace PictureManager
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
         }
-       
+
+        private void SaveLastFile()
+        {
+            string lastFile = dg1.CurrentRow?.Cells["Name"].Value?.ToString();
+            if (!string.IsNullOrEmpty(lastFile))
+            {
+                directoryListControl1.LastFile = lastFile;
+                //directoryListControl1.SaveToJson();
+            }
+
+        }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            SaveLastFile();
+
             // 等待队列清空
             while (!FileUtility._filesToDelete.IsEmpty)
             {
