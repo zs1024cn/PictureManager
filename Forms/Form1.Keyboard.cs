@@ -30,7 +30,7 @@ namespace PictureManager
                 s += "F11：幻灯片\r\n";
                 s += "F12：全屏\r\n";
                 s += "ctrl+s：重建图片并保存，ctrl+ r:旋转；ctrl+-:缩放图片\r\n";
-                s += "v=Hash/Dct/Sift相似图; f=Hsv相似图; t=AI增强; z=点赞; x=踩; d=删除; e=画图;ctrl+e=脸部马赛克;\r\n";
+                s += "v=Hash/Dct/Sift相似图; f=Hsv相似图; t=AI增强; z=点赞; x=踩; d=删除; e=画图;ctrl+e=脸部马赛克; \r\n";
                 MessageBox.Show(s);
             }
             else if (e.Control && k == Keys.F4)
