@@ -73,7 +73,12 @@ namespace PictureManager
 
             if (string.IsNullOrEmpty(existingMeta))
             {
-                existingMeta = GetFileFingerprintCached(sFileName);
+                // ★ M292：读指纹改异步，避免 UI 线程同步读磁盘卡死
+                existingMeta = await Task.Run(() => GetFileFingerprintCached(sFileName));
+
+                // ★ 异步返回后，检查当前行是否还是原来那行（用户可能已切换）
+                if (dg1.CurrentRow == null || dg1.CurrentRow.Index != r) return;
+
                 dg1.Rows[r].Cells["Meta"].Value = existingMeta;
 
                 if (_fileMeta.TryGetValue(existingMeta, out FileMeta meta))
