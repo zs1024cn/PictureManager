@@ -142,29 +142,38 @@ namespace PictureManager
                     }
                 });
 
-                BeginInvoke(new Action(() =>
+                BeginInvoke(new Action(async () =>
                 {
-                    foreach (var kvp in heartResults)
+                    try
                     {
-                        if (kvp.Key < dg1.Rows.Count)
-                            dg1.Rows[kvp.Key].Cells["heart"].Value = kvp.Value;
-                    }
-                    foreach (var kvp in breakResults)
-                    {
-                        if (kvp.Key < dg1.Rows.Count)
-                            dg1.Rows[kvp.Key].Cells["break"].Value = kvp.Value;
-                    }
-                    foreach (var kvp in metaResults)
-                    {
-                        if (kvp.Key < dg1.Rows.Count)
-                            dg1.Rows[kvp.Key].Cells["Meta"].Value = kvp.Value;
-                    }
+                        foreach (var kvp in heartResults)
+                        {
+                            if (kvp.Key < dg1.Rows.Count)
+                                dg1.Rows[kvp.Key].Cells["heart"].Value = kvp.Value;
+                        }
+                        foreach (var kvp in breakResults)
+                        {
+                            if (kvp.Key < dg1.Rows.Count)
+                                dg1.Rows[kvp.Key].Cells["break"].Value = kvp.Value;
+                        }
+                        foreach (var kvp in metaResults)
+                        {
+                            if (kvp.Key < dg1.Rows.Count)
+                                dg1.Rows[kvp.Key].Cells["Meta"].Value = kvp.Value;
+                        }
 
-                    // ⭐ 最后批量写入数据库
-                    _myDb.FlushBatch();
+                        // ★ FlushBatch 挪后台，await 等它完成
+                        await Task.Run(() => _myDb.FlushBatch());
 
-                    this.toolStripStatusLabelStatus.Text = $"元数据加载完成 in {(DateTime.Now - d0).TotalSeconds:F1}s";
-                    btnMeta.Enabled = true;
+                        // ★ 所有任务完成，才更新状态栏 + 按钮
+                        this.toolStripStatusLabelStatus.Text = $"元数据加载完成 in {(DateTime.Now - d0).TotalSeconds:F1}s";
+                        btnMeta.Enabled = true;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"[Meta] BeginInvoke 异常: {ex.Message}");
+                        btnMeta.Enabled = true;   // 异常也要恢复按钮
+                    }
                 }));
             }).ConfigureAwait(false);
         }

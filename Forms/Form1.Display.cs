@@ -114,17 +114,25 @@ namespace PictureManager
 
                 if (isVideo)
                 {
-                    // 等待 VideoView 真正就绪（有窗口句柄）
+                    // ★ 先让 videoView1 可见
+                    videoView1.Visible = true;
+                    chromBrowser.Visible = false;
+                    trackBar1.Visible = true;
+
+                    // ★ 等句柄就绪
                     int waitCount = 0;
-                    while (videoView1.Handle == IntPtr.Zero && waitCount < 30)
+                    while ((!videoView1.IsHandleCreated || videoView1.Handle == IntPtr.Zero) && waitCount < 30)
                     {
                         if (token.IsCancellationRequested) return;
                         await Task.Delay(50, token);
-                        Application.DoEvents();  // 让 UI 线程处理消息
+                        Application.DoEvents();
                         waitCount++;
                     }
 
                     if (token.IsCancellationRequested) return;
+
+                    // ★ 等窗口布局初始化
+                    await Task.Delay(100, token);
 
                     if (_libVLC == null)
                     {
@@ -132,8 +140,9 @@ namespace PictureManager
                         _mediaPlayer = new MediaPlayer(_libVLC);
                     }
                     videoView1.MediaPlayer = _mediaPlayer;
-                    // 强制等待 VideoView 就绪
-                    await Task.Delay(50, token);
+
+                    // ★ 等 VLC 拿到渲染窗口
+                    await Task.Delay(100, token);
 
                     if (token.IsCancellationRequested) return;
 

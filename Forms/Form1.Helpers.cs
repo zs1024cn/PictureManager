@@ -358,19 +358,91 @@ namespace PictureManager
                 }
             }
         }
-        private void edit(string file)
+        private async void edit(string file)
         {
             try
             {
-                Process.Start(new ProcessStartInfo("画图") { FileName = file });
-                return;
+                string ext = Path.GetExtension(file).ToLower();
+
+                if (FileUtility.IsVideoFile(ext))
+                {
+                    string losslessCut = Path.Combine(Application.StartupPath, "LosslessCut", "LosslessCut.exe");
+                    if (!File.Exists(losslessCut))
+                    {
+                        MessageBox.Show($"未找到 LosslessCut:\n{losslessCut}");
+                        return;
+                    }
+
+                    // ★ 1. 记下旧指纹（LosslessCut 改文件前）
+                    string oldFingerprint = GetFileFingerprintCached(file);
+
+                    // ★ 2. 停止播放，释放文件
+                    StopCurrentVideo();
+                    await Task.Delay(300);
+
+                    // ★ 3. 启动 LosslessCut 并等关闭
+                    var psi = new ProcessStartInfo(losslessCut)
+                    {
+                        FileName = losslessCut,
+                        Arguments = $"\"{file}\""
+                    };
+                    using (var p = Process.Start(psi))
+                    {
+                        await Task.Run(() => p.WaitForExit());
+                    }
+
+                    // ★ 4. 清旧指纹的 meta（进度、点赞等）
+                    if (!string.IsNullOrEmpty(oldFingerprint))
+                    {
+                        _fileMeta.Remove(oldFingerprint);
+                        // 如果数据库里也有，考虑清（可选）
+                    }
+
+                    // ★ 5. 强制刷新，重新加载文件（从头播）
+                    sCurrentFileName = "";
+                    ShowPicture();
+                }
+                else if (FileUtility.IsImageFile(ext))
+                {
+                    Process.Start(new ProcessStartInfo("画图") { FileName = file });
+                }
+                else
+                {
+                    Process.Start(new ProcessStartInfo(file) { UseShellExecute = true });
+                }
             }
             catch (Exception ee)
             {
                 MessageBox.Show(ee.Message);
             }
         }
+        /// <summary>
+        /// 停止当前视频播放，释放文件占用
+        /// </summary>
+        private void StopCurrentVideo()
+        {
+            _videoLoadCts?.Cancel();
+            _videoLoadCts?.Dispose();
+            _videoLoadCts = null;
 
+            SaveCurrentVideoProgress();
+            _currentVideoFingerprint = null;
+            timer1.Stop();
+
+            var mp = _mediaPlayer;
+            if (mp != null)
+            {
+                Task.Run(() =>
+                {
+                    try { mp.Stop(); } catch { }
+                });
+            }
+
+            videoView1.MediaPlayer = null;
+            videoView1.Visible = false;
+            trackBar1.Visible = false;
+            trackBar1.Value = 0;
+        }
 
         private void btnShow_Click(object sender, EventArgs e)
         {
