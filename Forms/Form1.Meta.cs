@@ -146,33 +146,42 @@ namespace PictureManager
                 {
                     try
                     {
-                        foreach (var kvp in heartResults)
+                        // ★ 解绑，只包"填 UI"部分
+                        dg1.CurrentCellChanged -= dg1_CurrentCellChanged;
+                        try
                         {
-                            if (kvp.Key < dg1.Rows.Count)
-                                dg1.Rows[kvp.Key].Cells["heart"].Value = kvp.Value;
+                            foreach (var kvp in heartResults)
+                            {
+                                if (kvp.Key < dg1.Rows.Count)
+                                    dg1.Rows[kvp.Key].Cells["heart"].Value = kvp.Value;
+                            }
+                            foreach (var kvp in breakResults)
+                            {
+                                if (kvp.Key < dg1.Rows.Count)
+                                    dg1.Rows[kvp.Key].Cells["break"].Value = kvp.Value;
+                            }
+                            foreach (var kvp in metaResults)
+                            {
+                                if (kvp.Key < dg1.Rows.Count)
+                                    dg1.Rows[kvp.Key].Cells["Meta"].Value = kvp.Value;
+                            }
                         }
-                        foreach (var kvp in breakResults)
+                        finally
                         {
-                            if (kvp.Key < dg1.Rows.Count)
-                                dg1.Rows[kvp.Key].Cells["break"].Value = kvp.Value;
-                        }
-                        foreach (var kvp in metaResults)
-                        {
-                            if (kvp.Key < dg1.Rows.Count)
-                                dg1.Rows[kvp.Key].Cells["Meta"].Value = kvp.Value;
+                            // ★ 填完立即恢复，不等 FlushBatch
+                            dg1.CurrentCellChanged += dg1_CurrentCellChanged;
                         }
 
-                        // ★ FlushBatch 挪后台，await 等它完成
+                        // ★ FlushBatch 不碰 dg1，不解绑
                         await Task.Run(() => _myDb.FlushBatch());
 
-                        // ★ 所有任务完成，才更新状态栏 + 按钮
                         this.toolStripStatusLabelStatus.Text = $"元数据加载完成 in {(DateTime.Now - d0).TotalSeconds:F1}s";
                         btnMeta.Enabled = true;
                     }
                     catch (Exception ex)
                     {
                         Debug.WriteLine($"[Meta] BeginInvoke 异常: {ex.Message}");
-                        btnMeta.Enabled = true;   // 异常也要恢复按钮
+                        btnMeta.Enabled = true;
                     }
                 }));
             }).ConfigureAwait(false);

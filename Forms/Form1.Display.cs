@@ -114,134 +114,27 @@ namespace PictureManager
 
                 if (isVideo)
                 {
-                    // ★ 先让 videoView1 可见
-                    videoView1.Visible = true;
-                    chromBrowser.Visible = false;
-                    trackBar1.Visible = true;
-
-                    // ★ 等句柄就绪
-                    int waitCount = 0;
-                    while ((!videoView1.IsHandleCreated || videoView1.Handle == IntPtr.Zero) && waitCount < 30)
-                    {
-                        if (token.IsCancellationRequested) return;
-                        await Task.Delay(50, token);
-                        Application.DoEvents();
-                        waitCount++;
-                    }
-
-                    if (token.IsCancellationRequested) return;
-
-                    // ★ 等窗口布局初始化
-                    await Task.Delay(100, token);
-
-                    if (_libVLC == null)
-                    {
-                        _libVLC = new LibVLC();
-                        _mediaPlayer = new MediaPlayer(_libVLC);
-                    }
-                    videoView1.MediaPlayer = _mediaPlayer;
-
-                    // ★ 等 VLC 拿到渲染窗口
-                    await Task.Delay(100, token);
-
-                    if (token.IsCancellationRequested) return;
-
-                    timer1.Stop();
-                    trackBar1.Value = 0;
-
-                    // 获取指纹并检查是否有保存的进度
-                    _currentVideoFingerprint = existingMeta;
-                    double savedProgress = 0;
-                    if (_fileMeta.TryGetValue(_currentVideoFingerprint, out FileMeta meta) && meta.Progress.HasValue)
-                    {
-                        savedProgress = meta.Progress.Value;
-                    }
-
+                    // ★ 先显示控件（句柄可能还没建，但 Visible 会触发布局）
                     videoView1.Visible = true;
                     trackBar1.Visible = true;
                     chromBrowser.Visible = false;
-                    // 不要用 using，让 Media 对象的生命周期由 VLC 自己管理
-                    var media = new Media(_libVLC, sFileName, FromType.FromPath);
-                    _mediaPlayer.Play(media);
 
-                    // --- 延迟设置音量，等视频真正开始播放 ---
-                    _ = Task.Run(async () =>
+                    // ★ 记录待播文件
+                    _pendingVideoFile = sFileName;
+
+                    // ★ 句柄已就绪 → 直接播；否则挂事件等
+                    if (videoView1.IsHandleCreated)
                     {
-                        try
-                        {
-                            // 等待播放器真正进入播放状态，内部初始化完成
-                            while (!_mediaPlayer.IsPlaying)
-                            {
-                                if (token.IsCancellationRequested) return;
-                                await Task.Delay(50, token);
-                            }
-                            if (token.IsCancellationRequested) return;
-
-                            // 此时再安全地恢复音量
-                            BeginInvoke(new Action(() =>
-                            {
-                                try
-                                {
-                                    if (_mediaPlayer != null && !token.IsCancellationRequested)
-                                        _mediaPlayer.Volume = iVideoVolume;
-                                }
-                                catch { }
-                            }));
-                        }
-                        catch (OperationCanceledException)
-                        {
-                            // 任务被取消，正常退出
-                        }
-                        catch (Exception)
-                        {
-                            // 忽略其他异常
-                        }
-                    }, token);
-
-                    // 恢复进度
-                    if (savedProgress > 0)
-                    {
-                        _ = Task.Run(async () =>
-                        {
-                            try
-                            {
-                                while (_mediaPlayer.Length <= 0 || !_mediaPlayer.IsPlaying)
-                                {
-                                    if (token.IsCancellationRequested) return;
-                                    await Task.Delay(100, token);
-                                }
-                                if (token.IsCancellationRequested) return;
-
-                                long totalLength = _mediaPlayer.Length;
-                                if (savedProgress < totalLength)
-                                {
-                                    float position = (float)(savedProgress / totalLength);
-                                    BeginInvoke(new Action(() =>
-                                    {
-                                        try
-                                        {
-                                            if (_mediaPlayer != null && !token.IsCancellationRequested)
-                                            {
-                                                _mediaPlayer.Position = position;
-                                                trackBar1.Value = (int)(position * trackBar1.Maximum);
-                                            }
-                                        }
-                                        catch { }
-                                    }));
-                                }
-                            }
-                            catch (OperationCanceledException)
-                            {
-                                // 任务被取消，正常退出
-                            }
-                            catch (Exception)
-                            {
-                                // 忽略其他异常
-                            }
-                        }, token);
+                        PlayPendingVideo();
                     }
-
-                    timer1.Start();
+                    else
+                    {
+                        videoView1.HandleCreated -= VideoView_HandleCreated;
+                        videoView1.HandleCreated += VideoView_HandleCreated;
+                    }
+                    FileInfo fi2 = new FileInfo(sFileName);
+                    toolStripStatusLabelSize.Text = FileUtility.FormatFileSize(fi2.Length);
+                    return;   // ★ 其余逻辑在 PlayPendingVideo 里
                 }
                 else if (isImage)
                 {
@@ -352,6 +245,87 @@ namespace PictureManager
 
             }
             _lastShowPictureTime = DateTime.Now;
+        }
+        private void VideoView_HandleCreated(object sender, EventArgs e)
+        {
+            videoView1.HandleCreated -= VideoView_HandleCreated;
+            if (!string.IsNullOrEmpty(_pendingVideoFile))
+                PlayPendingVideo();
+        }
+
+        private void PlayPendingVideo()
+        {
+            string file = _pendingVideoFile;
+            _pendingVideoFile = null;
+            if (string.IsNullOrEmpty(file)) return;
+
+            if (_libVLC == null)
+            {
+                _libVLC = new LibVLC();
+                _mediaPlayer = new MediaPlayer(_libVLC);
+            }
+            videoView1.MediaPlayer = _mediaPlayer;
+
+            timer1.Stop();
+            trackBar1.Value = 0;
+
+            // 恢复进度
+            _currentVideoFingerprint = GetFileFingerprintCached(file);
+            double savedProgress = 0;
+            if (_fileMeta.TryGetValue(_currentVideoFingerprint, out FileMeta meta) && meta.Progress.HasValue)
+            {
+                savedProgress = meta.Progress.Value;
+            }
+
+            var media = new Media(_libVLC, file, FromType.FromPath);
+            _mediaPlayer.Play(media);
+
+            // ★ 启动 timer1，驱动 timer1_Tick 更新时长/音量
+            timer1.Start();
+
+            // 延迟设置音量
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    while (!_mediaPlayer.IsPlaying) await Task.Delay(50);
+                    BeginInvoke(new Action(() =>
+                    {
+                        try { if (_mediaPlayer != null) _mediaPlayer.Volume = iVideoVolume; } catch { }
+                    }));
+                }
+                catch { }
+            });
+
+            // 恢复进度
+            if (savedProgress > 0)
+            {
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        while (_mediaPlayer.Length <= 0 || !_mediaPlayer.IsPlaying) await Task.Delay(100);
+                        long totalLength = _mediaPlayer.Length;
+                        if (savedProgress < totalLength)
+                        {
+                            float position = (float)(savedProgress / totalLength);
+                            BeginInvoke(new Action(() =>
+                            {
+                                try
+                                {
+                                    if (_mediaPlayer != null)
+                                    {
+                                        _mediaPlayer.Position = position;
+                                        trackBar1.Value = (int)(position * trackBar1.Maximum);
+                                    }
+                                }
+                                catch { }
+                            }));
+                        }
+                    }
+                    catch { }
+                });
+            }
         }
         private void ClearPicture()
         {
@@ -474,12 +448,12 @@ namespace PictureManager
 
         private void timer1_Tick(object sender, EventArgs e)
         {
-            TimeSpan d = DateTime.Now - dCurrentVideoPlayTime;
-            if (d.TotalMilliseconds < 3000)
-                return;
-
             if (_mediaPlayer != null && !_isSeeking)
             {
+                // ★ M323：Length 未就绪时跳过（不显示 00:00:00）
+                if (_mediaPlayer.Length <= 0 && _mediaPlayer.State != VLCState.Ended)
+                    return;
+
                 // 检查是否播放结束
                 if (_mediaPlayer.State == VLCState.Ended)
                 {
@@ -494,9 +468,7 @@ namespace PictureManager
                     });
                     if (videoView1.Visible)
                     {
-                        //_mediaPlayer.Stop();
                         trackBar1.Value = 0;
-                        //_mediaPlayer.Play();  // 重新播放
                         SaveCurrentVideoProgress();
                     }
                     return;
@@ -521,10 +493,10 @@ namespace PictureManager
                     }
                     else
                     {
-                        bool bVideoShow = videoView1.Visible;
                         toolStripStatusLabelTrack.Text = "";
                         toolStripStatusLabelVolume.Text = "";
                     }
+
                     // 每 10 秒保存一次进度
                     if ((int)(progress * isec) % 10 == 0)
                     {

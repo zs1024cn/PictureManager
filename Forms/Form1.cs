@@ -98,6 +98,7 @@ namespace PictureManager
         private bool _MetaEnabled = true;//是否启动meta,当false时，btnNamesize只检查文件名+size。否则用meta值来判定重复
 
         private bool _isFormLoadFinished = false;
+        private string _pendingVideoFile = null;
         // 
         public Form1()
         {
@@ -106,6 +107,7 @@ namespace PictureManager
        
         private async void Form1_Load(object sender, EventArgs e)
         {
+            this.tbPageRows.Text = "400000";
             _downloadBrowser = new Microsoft.Web.WebView2.WinForms.WebView2();
             _downloadBrowser.Size = new System.Drawing.Size(1024, 768);
             _downloadBrowser.Visible = false;
