@@ -100,6 +100,8 @@ namespace PictureManager
             }
 
             Debug.WriteLine($"FindAllDuplicates [{Name}] bucket={bucketType}: 有效文件 {files.Count}, 桶数 {buckets.Count}, 最大桶 {(buckets.Count > 0 ? buckets.Values.Max(b => b.Count) : 0)}");
+            var top10 = buckets.Values.OrderByDescending(b => b.Count).Take(10).Select(b => b.Count);
+            Debug.WriteLine($"[Buckets] Top10: {string.Join(",", top10)}");
 
             var groups = new List<List<string>>();
 
