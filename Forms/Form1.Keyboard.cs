@@ -265,7 +265,6 @@ namespace PictureManager
 
                 double threshold = DuplicateSettings.DefaultThreshold;
                 Debug.WriteLine($"[V] threshold={threshold}, tbHashRatio={tbHashRatio.Text}, DefaultThreshold={DuplicateSettings.DefaultThreshold}");
-                string bucketType = cbBucket.Text;
 
                 var similarFiles = new HashSet<string>();
 
@@ -279,7 +278,7 @@ namespace PictureManager
                     {
                         //foreach (var f in comparer.FindSimilar(filePath, threshold, bucketType))
                         //    similarFiles.Add(f);
-                        var list = comparer.FindSimilar(filePath, threshold, bucketType);
+                        var list = comparer.FindSimilar(filePath, threshold);
                         Debug.WriteLine($"[V] {name}: {list.Count}");   // ★ 加这行
                         foreach (var f in list) similarFiles.Add(f);
                     }
@@ -299,12 +298,11 @@ namespace PictureManager
 
                 SyncSettingsFromUI();
                 double threshold = DuplicateSettings.DefaultThreshold;
-                string bucketType = cbBucket.Text;
 
                 List<string> similarFiles;
                 try
                 {
-                    similarFiles = comparer.FindSimilar(filePath, threshold, bucketType);
+                    similarFiles = comparer.FindSimilar(filePath, threshold);
                 }
                 catch
                 {

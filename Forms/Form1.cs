@@ -144,7 +144,6 @@ namespace PictureManager
             directoryListControl1.LoadFromJson();
 
             this.cbFileType.Text = this.cbFileType.Items[0].ToString();
-            this.cbBucket.SelectedIndex = 0;
             this.cbCrop.SelectedIndex = 0;
             cbCompareDctMode.SelectedIndex = 0;
 
@@ -268,6 +267,21 @@ namespace PictureManager
         private void Form1_MouseMove(object sender, MouseEventArgs e)
         {
             FileUtility.ShowCursor();
+        }
+
+        private void btnBucket_Click(object sender, EventArgs e)
+        {
+            var files = GetValidImageFiles();
+            if (files.Count == 0)
+            {
+                MessageBox.Show("没有图片");
+                return;
+            }
+
+            using (var form = new BucketForm(files))
+            {
+                form.ShowDialog(this);
+            }
         }
     }
 }

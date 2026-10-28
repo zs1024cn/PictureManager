@@ -130,6 +130,7 @@ namespace PictureManager
             _cache.Clear();
             _recycleBin.Clear();
             Duplicate.CleanHashDctSiftCache();
+            Duplicate.BucketCache?.Clear();   // ★ 加
         }
 
         public void KeepOnly(HashSet<string> keepFiles)

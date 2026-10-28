@@ -31,6 +31,9 @@ namespace PictureManager
         public static ConcurrentDictionary<string, float[]> HsvCache = new ConcurrentDictionary<string, float[]>();
         private static ConcurrentDictionary<string, float[]> HsvCacheDeleted = new ConcurrentDictionary<string, float[]>();
 
+        public static Dictionary<string, string> BucketCache = new Dictionary<string, string>();
+        public static int LastLargeBucketThreshold = 500;
+
         private static object _cacheLock = new object();
         private static object _hsvLock = new object();
 

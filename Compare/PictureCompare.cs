@@ -73,7 +73,11 @@ namespace PictureManager
         /// 查找所有重复组（只处理已提取对应特征的图）。
         /// M250：桶间串行 + 桶内并行 + 连通分量分组 + 进度限频。
         /// </summary>
-        public List<List<string>> FindAllDuplicates(double threshold, string bucketType = "Allin", Action<string> progress = null)
+        /// <summary>
+        /// 查找所有重复组（只处理已提取对应特征的图）。
+        /// 优先用 Duplicate.BucketCache 分桶；空则回退 Hash 分桶。
+        /// </summary>
+        public List<List<string>> FindAllDuplicates(double threshold, Action<string> progress = null)
         {
             var cache = FeatureCacheManager.Instance;
 
@@ -83,25 +87,35 @@ namespace PictureManager
             {
                 var feat = GetFeature(kvp.Value);
                 if (feat == null) continue;
-                // DNN 特征：float[0] 表示无有效结果，跳过
                 if (feat is float[] fa && fa.Length == 0) continue;
                 files.Add(kvp.Key);
             }
 
-            // 分桶
+            // 分桶：优先 BucketCache，空则回退 Hash
             var buckets = new Dictionary<string, List<string>>();
-            foreach (var file in files)
+            if (Duplicate.BucketCache != null && Duplicate.BucketCache.Count > 0)
             {
-                string key = Duplicate.GetBucket(bucketType, file);
-                if (string.IsNullOrEmpty(key)) key = "default";
-                if (!buckets.ContainsKey(key))
-                    buckets[key] = new List<string>();
-                buckets[key].Add(file);
+                foreach (var file in files)
+                {
+                    if (Duplicate.BucketCache.TryGetValue(file, out string key) && !string.IsNullOrEmpty(key))
+                    {
+                        if (!buckets.ContainsKey(key)) buckets[key] = new List<string>();
+                        buckets[key].Add(file);
+                    }
+                }
+                Debug.WriteLine($"FindAllDuplicates [{Name}] 用 BucketCache: 有效文件 {files.Count}, 桶数 {buckets.Count}, 最大桶 {(buckets.Count > 0 ? buckets.Values.Max(b => b.Count) : 0)}");
             }
-
-            Debug.WriteLine($"FindAllDuplicates [{Name}] bucket={bucketType}: 有效文件 {files.Count}, 桶数 {buckets.Count}, 最大桶 {(buckets.Count > 0 ? buckets.Values.Max(b => b.Count) : 0)}");
-            var top10 = buckets.Values.OrderByDescending(b => b.Count).Take(10).Select(b => b.Count);
-            Debug.WriteLine($"[Buckets] Top10: {string.Join(",", top10)}");
+            else
+            {
+                foreach (var file in files)
+                {
+                    string key = Duplicate.GetBucket("Hash", file);   // ★ 回退 Hash
+                    if (string.IsNullOrEmpty(key)) key = "default";
+                    if (!buckets.ContainsKey(key)) buckets[key] = new List<string>();
+                    buckets[key].Add(file);
+                }
+                Debug.WriteLine($"FindAllDuplicates [{Name}] 回退 Hash 分桶: 有效文件 {files.Count}, 桶数 {buckets.Count}, 最大桶 {(buckets.Count > 0 ? buckets.Values.Max(b => b.Count) : 0)}");
+            }
 
             var groups = new List<List<string>>();
 
@@ -110,14 +124,19 @@ namespace PictureManager
             foreach (var bucket in buckets.Values)
             {
                 bucketIndex++;
+
                 if (bucketIndex % 20 == 0 || bucketIndex == totalBuckets)
                     progress?.Invoke($"桶 {bucketIndex}/{totalBuckets}, 桶内 {bucket.Count} 张");
 
-                if (bucket.Count > DuplicateSettings.MaxBucketLimit) continue;
+                if (bucket.Count > DuplicateSettings.MaxBucketLimit)
+                {
+                    Debug.WriteLine($"跳过超大桶: {bucket.Count} 张");
+                    continue;
+                }
 
                 if (Name == "SIFT")
                 {
-                    // ★ M244 贪心版（11 秒）
+                    // SIFT：贪心（M254）
                     var localVisited = new HashSet<string>();
                     var localGroups = new List<List<string>>();
                     var localLock = new object();
@@ -160,7 +179,7 @@ namespace PictureManager
                 }
                 else
                 {
-                    // ★ M250 连通分量版（Hash/DCT 用）
+                    // Hash/DCT/其他：连通分量（M250）
                     int n = bucket.Count;
                     var features = new object[n];
                     for (int i = 0; i < n; i++)

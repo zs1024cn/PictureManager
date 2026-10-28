@@ -60,7 +60,7 @@ namespace PictureManager
             this.btnNameSize = new System.Windows.Forms.Button();
             this.tabControl1 = new System.Windows.Forms.TabControl();
             this.tabFiles = new System.Windows.Forms.TabPage();
-            this.cbBucket = new System.Windows.Forms.ComboBox();
+            this.btnBucket = new System.Windows.Forms.Button();
             this.btnCompare = new System.Windows.Forms.Button();
             this.tbFilenameFilter = new System.Windows.Forms.TextBox();
             this.label16 = new System.Windows.Forms.Label();
@@ -464,7 +464,7 @@ namespace PictureManager
             // tabFiles
             // 
             this.tabFiles.BackColor = System.Drawing.Color.Transparent;
-            this.tabFiles.Controls.Add(this.cbBucket);
+            this.tabFiles.Controls.Add(this.btnBucket);
             this.tabFiles.Controls.Add(this.btnCompare);
             this.tabFiles.Controls.Add(this.tbFilenameFilter);
             this.tabFiles.Controls.Add(this.label16);
@@ -481,21 +481,17 @@ namespace PictureManager
             this.tabFiles.TabIndex = 0;
             this.tabFiles.Text = "列表";
             // 
-            // cbBucket
+            // btnBucket
             // 
-            this.cbBucket.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cbBucket.Font = new System.Drawing.Font("宋体", 14.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.cbBucket.ForeColor = System.Drawing.Color.DarkCyan;
-            this.cbBucket.FormattingEnabled = true;
-            this.cbBucket.Items.AddRange(new object[] {
-            "Hash",
-            "Dct",
-            "Sift"});
-            this.cbBucket.Location = new System.Drawing.Point(82, 77);
-            this.cbBucket.Margin = new System.Windows.Forms.Padding(2);
-            this.cbBucket.Name = "cbBucket";
-            this.cbBucket.Size = new System.Drawing.Size(64, 27);
-            this.cbBucket.TabIndex = 136;
+            this.btnBucket.BackColor = System.Drawing.Color.PowderBlue;
+            this.btnBucket.Location = new System.Drawing.Point(79, 68);
+            this.btnBucket.Margin = new System.Windows.Forms.Padding(2);
+            this.btnBucket.Name = "btnBucket";
+            this.btnBucket.Size = new System.Drawing.Size(64, 43);
+            this.btnBucket.TabIndex = 136;
+            this.btnBucket.Text = "分桶";
+            this.btnBucket.UseVisualStyleBackColor = false;
+            this.btnBucket.Click += new System.EventHandler(this.btnBucket_Click);
             // 
             // btnCompare
             // 
@@ -1218,6 +1214,7 @@ namespace PictureManager
             // directoryListControl1
             // 
             this.directoryListControl1.BackColor = System.Drawing.SystemColors.ActiveCaption;
+            this.directoryListControl1.LastFile = "";
             this.directoryListControl1.Location = new System.Drawing.Point(234, 0);
             this.directoryListControl1.Name = "directoryListControl1";
             this.directoryListControl1.Size = new System.Drawing.Size(632, 549);
@@ -1340,7 +1337,6 @@ namespace PictureManager
         private System.Windows.Forms.TextBox tbFilenameFilter;
         private System.Windows.Forms.Label label16;
         private System.Windows.Forms.Button btnCompare;
-        private System.Windows.Forms.ComboBox cbBucket;
         private System.Windows.Forms.ComboBox cbCompareDctMode;
         private System.Windows.Forms.Label label17;
         private System.Windows.Forms.Label label4;
@@ -1356,6 +1352,7 @@ namespace PictureManager
         private System.Windows.Forms.Button btnNameSize;
         private System.Windows.Forms.TextBox tbMaxBucketLimit;
         private System.Windows.Forms.Label label22;
+        private System.Windows.Forms.Button btnBucket;
     }
 }
 

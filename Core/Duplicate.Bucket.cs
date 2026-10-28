@@ -9,6 +9,20 @@ namespace PictureManager
 {
     public partial class Duplicate
     {
+        public static string GetBucketByMode(string mode, ImageFeature feature, int param)
+        {
+            switch (mode)
+            {
+                case "Hash":
+                    return feature.Hash != null ? GetBucketByHashWithLevels(feature.Hash, param) : null;
+                case "DCT":
+                    return feature.Dct != null ? GetBucketByDctWithLevels(feature.Dct, param) : null;
+                case "SIFT":
+                    return feature.Sift != null ? GetBucketBySiftWithPoints(feature.Sift, param) : null;
+                default:
+                    return null;
+            }
+        }
         public static string GetBucket(string bucketType, string file)
         {
             string key = "Allin";
@@ -28,6 +42,95 @@ namespace PictureManager
                     key = GetBucketBySift(sift);
             }
             return key;
+        }
+        // ★ M343：带档位的 Hash 分桶
+        public static string GetBucketByHashWithLevels(byte[] hash, int levels)
+        {
+            if (hash == null || hash.Length < 8) return "short";
+            if (levels < 2) levels = 2;
+
+            int blockCount = 8;
+            int blockSize = hash.Length / blockCount;
+            if (blockSize == 0) return "short";
+
+            double step = DuplicateSettings.HashGray / (double)levels;
+            if (step < 1) step = 1;
+
+            var sb = new System.Text.StringBuilder();
+            for (int b = 0; b < blockCount; b++)
+            {
+                double sum = 0;
+                for (int i = 0; i < blockSize; i++)
+                    sum += hash[b * blockSize + i];
+                double blockMean = sum / blockSize;
+
+                int q = (int)(blockMean / step);
+                if (q >= levels) q = levels - 1;
+                if (q < 0) q = 0;
+                sb.Append(q);
+            }
+            return sb.ToString();
+        }
+
+        // ★ M343：带档位的 DCT 分桶
+        public static string GetBucketByDctWithLevels(Mat hist, int levels)
+        {
+            if (hist == null || hist.Empty()) return "";
+            if (levels < 2) levels = 2;
+            if (levels > 4) levels = 4;   // DCT 每段最多 4 档
+
+            int perChannel = 256;
+            int segments = 4;
+            int perSeg = perChannel / segments;
+            int perLevel = perSeg / levels;
+
+            string result = "";
+            for (int ch = 0; ch < 3; ch++)
+            {
+                int offset = ch * perChannel;
+                for (int s = 0; s < segments; s++)
+                {
+                    float maxVal = 0;
+                    int maxIdx = 0;
+                    for (int i = 0; i < perSeg; i++)
+                    {
+                        float val = hist.At<float>(offset + s * perSeg + i);
+                        if (val > maxVal) { maxVal = val; maxIdx = i; }
+                    }
+                    int level = maxIdx / perLevel;
+                    if (level >= levels) level = levels - 1;
+                    result += level.ToString();
+                }
+            }
+            return result;
+        }
+
+        // ★ M343：带点数的 SIFT 分桶
+        public static string GetBucketBySiftWithPoints(Tuple<KeyPoint[], Mat> sift, int points)
+        {
+            if (sift == null || sift.Item1 == null) return "";
+            if (points < 4) points = 4;
+            if (points > 20) points = 20;
+
+            var sorted = sift.Item1.OrderByDescending(k => k.Size).Take(points).ToArray();
+            int n = sorted.Length;
+            if (n < 2) return "";
+
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < n - 1; i++)
+            {
+                float dx = sorted[i + 1].Pt.X - sorted[i].Pt.X;
+                float dy = sorted[i + 1].Pt.Y - sorted[i].Pt.Y;
+
+                int quadrant;
+                if (dx >= 0 && dy >= 0) quadrant = 0;
+                else if (dx < 0 && dy >= 0) quadrant = 1;
+                else if (dx < 0 && dy < 0) quadrant = 2;
+                else quadrant = 3;
+
+                sb.Append(quadrant);
+            }
+            return sb.ToString();
         }
         public static string GetBucketByHash(byte[] hash)
         {
@@ -108,7 +211,7 @@ namespace PictureManager
             return sb.ToString();  // 3^8 = 6561 种
         }
 
-        private static string GetBucketByDct(Mat hist)
+        public static string GetBucketByDct(Mat hist)
         {
             if (hist == null || hist.Empty()) return "";
 
@@ -143,7 +246,7 @@ namespace PictureManager
             return result;
         }
 
-        private static string GetBucketBySift(Tuple<KeyPoint[], Mat> sift)
+        public static string GetBucketBySift(Tuple<KeyPoint[], Mat> sift)
         {
             if (sift == null) return "";
             if (sift.Item1 == null || sift.Item1.Length < 2) return "";

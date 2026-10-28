@@ -29,8 +29,6 @@ namespace PictureManager
         // 默认相似度阈值（Hash/HSV/DCT 用）
         public static double DefaultThreshold = 0.9;
 
-        // 分桶参数
-        public static string BucketType = "Hash";
         // 分桶上限
         public static int MaxBucketLimit = 500;
     }

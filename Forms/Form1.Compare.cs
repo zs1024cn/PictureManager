@@ -173,10 +173,9 @@ namespace PictureManager
                 sift.MinMatchPoints = int.Parse(tbSiftMatchPoint.Text);
 
             double threshold = DuplicateSettings.DefaultThreshold;
-            string bucketType = cbBucket.Text;
             string mode = _currentCompareMode;
 
-            this.toolStripStatusLabelStatus.Text = $"开始 {mode} 查重（分桶：{bucketType}）...";
+            this.toolStripStatusLabelStatus.Text = $"开始 {mode} 查重）...";
 
             return Task.Run(() =>
             {
@@ -184,7 +183,7 @@ namespace PictureManager
                 List<List<string>> groups;
                 try
                 {
-                    groups = comparer.FindAllDuplicates(threshold, bucketType, (msg) =>
+                    groups = comparer.FindAllDuplicates(threshold, (msg) =>
                     {
                         BeginInvoke(new Action(() =>
                         {
@@ -204,7 +203,7 @@ namespace PictureManager
                 BeginInvoke(new Action(() =>
                 {
                     this.toolStripStatusLabelStatus.Text =
-                        $"{mode}完成（分桶：{bucketType}）. 重复组:{groups.Count}, 耗时{(DateTime.Now - d0).TotalSeconds:F1}s";
+                        $"{mode}完成. 重复组:{groups.Count}, 耗时{(DateTime.Now - d0).TotalSeconds:F1}s";
 
                     if (groups.Count == 0)
                     {
@@ -241,7 +240,6 @@ namespace PictureManager
             if (double.TryParse(tbHashRatio.Text, out double ratio)) DuplicateSettings.DefaultThreshold = ratio;
 
             // 分桶
-            DuplicateSettings.BucketType = cbBucket.Text;
             if (int.TryParse(tbMaxBucketLimit.Text, out int maxBucket)) DuplicateSettings.MaxBucketLimit = maxBucket;
         }
         /// <summary>

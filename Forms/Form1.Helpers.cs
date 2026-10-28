@@ -229,7 +229,14 @@ namespace PictureManager
             var allFiles = new List<string>();
             foreach (var group in groups)
             {
-                foreach (string file in group)
+                // ★ 组内按文件大小升序（小的在前）
+                var sortedGroup = group
+                    .Select(f => new { File = f, Size = new FileInfo(f).Length })
+                    .OrderBy(x => x.Size)
+                    .Select(x => x.File)
+                    .ToList();
+
+                foreach (string file in sortedGroup)
                     allFiles.Add(file);
             }
 
