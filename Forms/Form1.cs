@@ -99,6 +99,11 @@ namespace PictureManager
 
         private bool _isFormLoadFinished = false;
         private string _pendingVideoFile = null;
+
+        private long _cachedVideoLength = 0;
+        private float _cachedVideoPosition = 0;
+        private long _lastSavedProgressMs = -1;
+        private bool _libVLCReady = false;
         // 
         public Form1()
         {
@@ -158,17 +163,70 @@ namespace PictureManager
 
             LoadForumConfig();
 
-            // 预热放到后台，不阻塞窗体
-            await Task.Run(() =>
+            // ★ VLC 初始化后台跑，不 await，不阻塞 Form1_Load
+            _ = Task.Run(() =>
             {
-                // 初始化 VLC（不耗时）
                 if (_libVLC == null)
                 {
                     _libVLC = new LibVLC();
                     _mediaPlayer = new MediaPlayer(_libVLC);
+
+                    // ★ 事件里更新缓存 + BeginInvoke 更新 UI
+                    _mediaPlayer.LengthChanged += (s, ev) =>
+                    {
+                        _cachedVideoLength = ev.Length;
+                        BeginInvoke(new Action(() => UpdateVideoUi()));
+                    };
+
+                    _mediaPlayer.PositionChanged += (s, ev) =>
+                    {
+                        _cachedVideoPosition = ev.Position;
+                        BeginInvoke(new Action(() => UpdateVideoUi()));
+                    };
+
+                    _mediaPlayer.TimeChanged += (s, ev) =>
+                    {
+                        // ★ 每 10 秒保存一次进度（不碰 UI，不读 _mediaPlayer）
+                        if (_currentVideoFingerprint == null) return;
+                        if (ev.Time - _lastSavedProgressMs >= 10000)
+                        {
+                            _lastSavedProgressMs = ev.Time;
+                            SaveCurrentVideoProgressByTime(ev.Time);
+                        }
+                    };
+                    _mediaPlayer.EndReached += (s, ev) =>
+                    {
+                        Task.Run(async () =>
+                        {
+                            try
+                            {
+                                // ★ 等 VLC 从 Ended 状态退出
+                                await Task.Delay(100);
+
+                                var currentMedia = _mediaPlayer.Media;
+                                _mediaPlayer.Stop();
+                                await Task.Delay(50);
+
+                                if (currentMedia != null)
+                                    _mediaPlayer.Play(currentMedia);
+                            }
+                            catch { }
+                        });
+
+                        BeginInvoke(new Action(() =>
+                        {
+                            try
+                            {
+                                trackBar1.Value = 0;
+                                toolStripStatusLabelTrack.Text = "00:00:00/" + TimeSpan.FromSeconds((int)(_cachedVideoLength / 1000)).ToString(@"hh\:mm\:ss");
+                            }
+                            catch { }
+                        }));
+                    };
+                    _libVLCReady = true;
                 }
+
                 var warmupBrowser = new ChromiumWebBrowser("about:blank");
-                // 不需要加到 Controls，后台默默初始化即可
                 Thread.Sleep(2000);
                 warmupBrowser.Dispose();
             });
@@ -251,6 +309,12 @@ namespace PictureManager
             directoryListControl1.SaveToJson();
             SaveMetaJson();
 
+            // ★ 关闭前保存最终进度
+            if (_mediaPlayer != null && _cachedVideoLength > 0 && !string.IsNullOrEmpty(_currentVideoFingerprint))
+            {
+                long timeMs = (long)(_cachedVideoPosition * _cachedVideoLength);
+                SaveCurrentVideoProgressByTime(timeMs);
+            }
             _mediaPlayer?.Stop();
             _mediaPlayer?.Dispose();
             _libVLC?.Dispose();
