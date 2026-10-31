@@ -452,37 +452,43 @@ namespace PictureManager
             {
                 if (e.KeyCode == Keys.Right)
                 {
-                    double totalSeconds = _mediaPlayer.Length / 1000.0;
-                    double stepPercent;
+                    double totalSeconds = _cachedVideoLength / 1000.0;
+                    if (totalSeconds <= 0) return;
 
-                    if (e.Control)
-                        stepPercent = 500;   // 10000 × 5%
-                    else
-                        stepPercent = (10.0 / totalSeconds) * 10000;
+                    double stepSecondsA = Math.Min(5.0, totalSeconds / 10.0);
+                    double stepSecondsB = totalSeconds / 10.0;
+                    if (stepSecondsA > stepSecondsB) stepSecondsB = stepSecondsA;
+
+                    double stepSeconds = e.Control ? stepSecondsB : stepSecondsA;
+                    double stepPercent = (stepSeconds / totalSeconds) * 10000.0;
 
                     int newValue = trackBar1.Value + (int)Math.Round(stepPercent);
-                    if (newValue > trackBar1.Maximum) newValue = trackBar1.Maximum;
+                    if (newValue > trackBar1.Maximum - 1) newValue = trackBar1.Maximum - 1;
+                    _isSeeking = true;
                     trackBar1.Value = newValue;
                     trackBar1_Scroll(sender, e);
+                    Task.Delay(1000).ContinueWith(_ => BeginInvoke(new Action(() => { _isSeeking = false; })));
                     e.Handled = true;
-                    SaveCurrentVideoProgress();
                 }
                 else if (e.KeyCode == Keys.Left)
                 {
-                    double totalSeconds = _mediaPlayer.Length / 1000.0;
-                    double stepPercent;
+                    double totalSeconds = _cachedVideoLength / 1000.0;
+                    if (totalSeconds <= 0) return;
 
-                    if (e.Control)
-                        stepPercent = 500;   // 10000 × 5%
-                    else
-                        stepPercent = (10.0 / totalSeconds) * 10000;
+                    double stepSecondsA = Math.Min(5.0, totalSeconds / 10.0);
+                    double stepSecondsB = totalSeconds / 10.0;
+                    if (stepSecondsA > stepSecondsB) stepSecondsB = stepSecondsA;
+
+                    double stepSeconds = e.Control ? stepSecondsB : stepSecondsA;
+                    double stepPercent = (stepSeconds / totalSeconds) * 10000.0;
 
                     int newValue = trackBar1.Value - (int)Math.Round(stepPercent);
                     if (newValue < trackBar1.Minimum) newValue = trackBar1.Minimum;
+                    _isSeeking = true;
                     trackBar1.Value = newValue;
                     trackBar1_Scroll(sender, e);
+                    Task.Delay(1000).ContinueWith(_ => BeginInvoke(new Action(() => { _isSeeking = false; })));
                     e.Handled = true;
-                    SaveCurrentVideoProgress();
                 }
                 else if (e.KeyCode == Keys.Space)
                 {
@@ -512,6 +518,5 @@ namespace PictureManager
                 }
             }
         }
-
     }
 }
