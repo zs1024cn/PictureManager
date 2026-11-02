@@ -269,6 +269,8 @@ namespace PictureManager
                     Debug.WriteLine($"[ShowAlbum] 设置属性...");
                     album.FilesDeleted += (deletedFiles) =>
                     {
+                        if (deletedFiles.Contains(sCurrentFileName))
+                            StopCurrentVideo();
                         RemoveDatagridRowsByNames(deletedFiles);
                     };
                     album.DirectoryList = directoryListControl1.CheckedDirectories;
@@ -439,16 +441,17 @@ namespace PictureManager
             var mp = _mediaPlayer;
             if (mp != null)
             {
-                Task.Run(() =>
-                {
-                    try { mp.Stop(); } catch { }
-                });
+                // ★ Stop 同步等，确保 Play 前 Stop 完成（最多 500ms）
+                var stopTask = Task.Run(() => { try { mp.Stop(); } catch { } });
+                stopTask.Wait(500);
             }
 
             videoView1.MediaPlayer = null;
             videoView1.Visible = false;
             trackBar1.Visible = false;
             trackBar1.Value = 0;
+
+            sCurrentFileName = "";
         }
 
         private void btnShow_Click(object sender, EventArgs e)

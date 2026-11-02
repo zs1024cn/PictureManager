@@ -284,7 +284,9 @@ namespace PictureManager
                 savedProgress = meta.Progress.Value;
 
             var media = new Media(_libVLC, file, FromType.FromPath);
+            Debug.WriteLine($"[PlayPendingVideo] Play 前, state={_mediaPlayer.State}");
             _mediaPlayer.Play(media);
+            Debug.WriteLine($"[PlayPendingVideo] Play 后");
 
             // 音量恢复
             _ = Task.Run(async () =>
@@ -517,5 +519,6 @@ namespace PictureManager
         {
             _isSeeking = false;
         }
+
     }
 }

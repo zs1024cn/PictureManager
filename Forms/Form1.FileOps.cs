@@ -17,7 +17,10 @@ namespace PictureManager
         // 文件操作相关方法（从 Form1.cs 移入）
         private void btnDelete()
         {
+            StopCurrentVideo();
+
             if (this.dg1.Rows.Count < 1) return;
+
             int r = this.dg1.CurrentRow.Index;
             string sFileName = this.dg1.Rows[r].Cells["Name"].Value.ToString();
 
@@ -95,6 +98,9 @@ namespace PictureManager
                     RemoveDatagridRows(i);
                 }
             }
+            if (filesToDelete.Contains(sCurrentFileName))
+                StopCurrentVideo();
+
             BackgroundDeleteFiles(filesToDelete, null, MarkGarbage);
 
             AlbumForm.Clear(dir);
@@ -258,6 +264,9 @@ MessageBoxIcon.Question);
                     }));
                     return;
                 }
+                
+                if (filesToDelete.Contains(sCurrentFileName))
+                    StopCurrentVideo();
 
                 // ⭐ 第五步：删除文件
                 int total = filesToDelete.Count;
@@ -339,6 +348,8 @@ MessageBoxIcon.Question);
                     }
                 }
             }
+            if (filesToDelete.Contains(sCurrentFileName))
+                StopCurrentVideo();
 
             //this.dg1.Sort(this.dg1.Columns["Date"], ListSortDirection.Descending);
             // ⭐ 暂时取消事件绑定
@@ -415,6 +426,8 @@ MessageBoxIcon.Question);
 
                     try
                     {
+                        if (sFileName == sCurrentFileName) StopCurrentVideo();
+
                         string fingerprint = GetFileFingerprintCached(sFileName);
                         _fileMeta.Remove(fingerprint);
                         //FileSystem.DeleteFile(sFileName, UIOption.OnlyErrorDialogs, RecycleOption.SendToRecycleBin);

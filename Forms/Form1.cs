@@ -196,19 +196,32 @@ namespace PictureManager
                     };
                     _mediaPlayer.EndReached += (s, ev) =>
                     {
+                        // ★ 记录触发时的文件，重播前检查是否还是它
+                        string fileAtEnd = sCurrentFileName;
+
                         Task.Run(async () =>
                         {
                             try
                             {
-                                // ★ 等 VLC 从 Ended 状态退出
                                 await Task.Delay(100);
 
-                                var currentMedia = _mediaPlayer.Media;
+                                // ★ 文件变了、空了、删了 → 不重播
+                                if (string.IsNullOrEmpty(fileAtEnd) || fileAtEnd != sCurrentFileName) return;
+                                if (!File.Exists(fileAtEnd)) return;
+
+                                // ★ 当前不是视频（用户切到图片）→ 不重播
+                                if (!videoView1.Visible) return;
+
                                 _mediaPlayer.Stop();
                                 await Task.Delay(50);
 
-                                if (currentMedia != null)
-                                    _mediaPlayer.Play(currentMedia);
+                                // ★ Stop 后再次检查，防止 Stop 期间用户删除/切行
+                                if (fileAtEnd != sCurrentFileName) return;
+                                if (!File.Exists(fileAtEnd)) return;
+                                if (!videoView1.Visible) return;
+
+                                var media = new Media(_libVLC, fileAtEnd, FromType.FromPath);
+                                _mediaPlayer.Play(media);
                             }
                             catch { }
                         });
