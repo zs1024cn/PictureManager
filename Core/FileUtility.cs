@@ -159,7 +159,7 @@ namespace PictureManager
             ext = ext.ToLower();
             return ext == ".jpg" || ext == ".jpeg" || ext == ".jpe" || ext == ".jfif" || ext == ".png" ||
                    ext == ".gif" || ext == ".webp" || ext == ".bmp" || ext == ".dib" || ext == ".rle" ||
-                   ext == ".tif" || ext == ".tiff" || ext == ".ico" || ext == ".wdp" || ext == ".jxr";
+                   ext == ".tif" || ext == ".tiff" || ext == ".ico" || ext == ".wdp" || ext == ".jxr" ;
         }
 
         public static bool IsVideoFile(string ext)
@@ -169,7 +169,7 @@ namespace PictureManager
             ext == ".mov" || ext == ".mkv" || ext == ".wmv" || ext == ".ts" || ext == ".m2ts" ||
             ext == ".webm" || ext == ".3gp" || ext == ".flv" || ext == ".vob" || ext == ".ogv" ||
             ext == ".mp3" || ext == ".wav" || ext == ".flac" || ext == ".ogg" || ext == ".m4a" ||
-            ext == ".wma" || ext == ".aac" || ext == ".opus";
+            ext == ".wma" || ext == ".aac" || ext == ".opus" ;
         }
 
         public static bool IsTextFile(string ext)

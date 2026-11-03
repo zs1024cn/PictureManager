@@ -236,6 +236,7 @@ namespace PictureManager
                             catch { }
                         }));
                     };
+
                     _libVLCReady = true;
                 }
 
