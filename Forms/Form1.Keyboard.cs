@@ -13,6 +13,8 @@ namespace PictureManager
 {
     public partial class Form1
     {
+        private double _videoStepSeconds = 5.0;          // 当前步进（秒）
+        private DateTime _lastStepKeyTime = DateTime.MinValue;   // 上次左右键时间
         // 键盘处理相关方法（从 Form1.cs 移入）
         private void Form1_KeyDown(object sender, KeyEventArgs e)
         {
@@ -450,45 +452,45 @@ namespace PictureManager
         {
             if (trackBar1.Visible && _mediaPlayer != null && _mediaPlayer.Length > 0)
             {
-                if (e.KeyCode == Keys.Right)
+                if (e.KeyCode == Keys.Right || e.KeyCode == Keys.Left)
                 {
                     double totalSeconds = _cachedVideoLength / 1000.0;
                     if (totalSeconds <= 0) return;
 
-                    double stepSecondsA = Math.Min(5.0, totalSeconds / 10.0);
-                    double stepSecondsB = totalSeconds / 10.0;
-                    if (stepSecondsA > stepSecondsB) stepSecondsB = stepSecondsA;
+                    // ★ 两次左右键间隔 < 1 秒 → 跳跃模式（步长 = max(5秒, 总长10%)）
+                    DateTime now = DateTime.Now;
+                    if ((now - _lastStepKeyTime).TotalSeconds < 1.0)
+                    {
+                        _videoStepSeconds = Math.Max(5.0, totalSeconds * 0.1);
+                    }
+                    else
+                    {
+                        _videoStepSeconds = 5.0;
+                    }
+                    _lastStepKeyTime = now;
 
-                    double stepSeconds = e.Control ? stepSecondsB : stepSecondsA;
-                    double stepPercent = (stepSeconds / totalSeconds) * 10000.0;
+                    double stepPercent = (_videoStepSeconds / totalSeconds) * 10000.0;
 
-                    int newValue = trackBar1.Value + (int)Math.Round(stepPercent);
-                    if (newValue > trackBar1.Maximum - 1) newValue = trackBar1.Maximum - 1;
-                    _isSeeking = true;
-                    trackBar1.Value = newValue;
-                    trackBar1_Scroll(sender, e);
-                    Task.Delay(1000).ContinueWith(_ => BeginInvoke(new Action(() => { _isSeeking = false; })));
-                    e.Handled = true;
-                }
-                else if (e.KeyCode == Keys.Left)
-                {
-                    double totalSeconds = _cachedVideoLength / 1000.0;
-                    if (totalSeconds <= 0) return;
-
-                    double stepSecondsA = Math.Min(5.0, totalSeconds / 10.0);
-                    double stepSecondsB = totalSeconds / 10.0;
-                    if (stepSecondsA > stepSecondsB) stepSecondsB = stepSecondsA;
-
-                    double stepSeconds = e.Control ? stepSecondsB : stepSecondsA;
-                    double stepPercent = (stepSeconds / totalSeconds) * 10000.0;
-
-                    int newValue = trackBar1.Value - (int)Math.Round(stepPercent);
-                    if (newValue < trackBar1.Minimum) newValue = trackBar1.Minimum;
-                    _isSeeking = true;
-                    trackBar1.Value = newValue;
-                    trackBar1_Scroll(sender, e);
-                    Task.Delay(1000).ContinueWith(_ => BeginInvoke(new Action(() => { _isSeeking = false; })));
-                    e.Handled = true;
+                    if (e.KeyCode == Keys.Right)
+                    {
+                        int newValue = trackBar1.Value + (int)Math.Round(stepPercent);
+                        if (newValue > trackBar1.Maximum - 1) newValue = trackBar1.Maximum - 1;
+                        _isSeeking = true;
+                        trackBar1.Value = newValue;
+                        trackBar1_Scroll(sender, e);
+                        Task.Delay(1000).ContinueWith(_ => BeginInvoke(new Action(() => { _isSeeking = false; })));
+                        e.Handled = true;
+                    }
+                    else
+                    {
+                        int newValue = trackBar1.Value - (int)Math.Round(stepPercent);
+                        if (newValue < trackBar1.Minimum) newValue = trackBar1.Minimum;
+                        _isSeeking = true;
+                        trackBar1.Value = newValue;
+                        trackBar1_Scroll(sender, e);
+                        Task.Delay(1000).ContinueWith(_ => BeginInvoke(new Action(() => { _isSeeking = false; })));
+                        e.Handled = true;
+                    }
                 }
                 else if (e.KeyCode == Keys.Space)
                 {
