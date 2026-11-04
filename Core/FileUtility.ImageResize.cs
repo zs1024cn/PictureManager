@@ -12,6 +12,51 @@ namespace PictureManager
     {
         private static Vec3b _currentBorderColor = new Vec3b();
 
+        /// <summary>
+        /// 重建图片（去边框 + 去竖条 + 缩放），输出到指定文件，不覆盖原文件。
+        /// </summary>
+        public static bool RebuildPictureTo(string sourceFile, string outputFile, int MBSize = 2)
+        {
+            try
+            {
+                var fi = new FileInfo(sourceFile);
+                bool needResize = fi.Length > MBSize * 1024 * 1024;
+
+                byte[] fileData = File.ReadAllBytes(sourceFile);
+                using (var mat = Cv2.ImDecode(fileData, ImreadModes.Color))
+                {
+                    if (mat == null || mat.Empty()) return false;
+
+                    var cropped = CropBorder(mat);
+                    cropped = RemoveMiddleBar(cropped);
+
+                    if (needResize)
+                    {
+                        int newWidth = cropped.Width / 2;
+                        int newHeight = cropped.Height / 2;
+                        using (var resized = new Mat())
+                        {
+                            Cv2.Resize(cropped, resized, new OpenCvSharp.Size(newWidth, newHeight));
+                            byte[] data = resized.ImEncode(".jpg");
+                            File.WriteAllBytes(outputFile, data);
+                        }
+                    }
+                    else
+                    {
+                        byte[] data = cropped.ImEncode(".jpg");
+                        File.WriteAllBytes(outputFile, data);
+                    }
+
+                    cropped.Dispose();
+                    return File.Exists(outputFile);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"RebuildPictureTo 失败: {sourceFile}, {ex.Message}");
+                return false;
+            }
+        }
         // ========== 缩放 ==========
 
         public static void ResizeImage(string sFilename)
