@@ -47,6 +47,7 @@ namespace PictureManager
 
             this.WindowState = FormWindowState.Maximized;
             this.Text = "红线左旧右新。按F1删除新，按F2新换旧。ESC保留两个。";
+            this.BackColor = Color.FromArgb(0, 99, 177);   // Win11 默认蓝 #0078D4
 
             // 加载左图
             _leftImage?.Dispose();
@@ -77,6 +78,7 @@ namespace PictureManager
             _leftFilePath = leftFile;
             
             this.Text = "图片对比增强";
+            this.BackColor = Color.FromArgb(0, 99, 177);   // Win11 默认蓝 #0078D4
             this.KeyPreview = true;
             this.SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
 

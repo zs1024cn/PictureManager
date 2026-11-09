@@ -104,7 +104,7 @@ namespace PictureManager
         private float _cachedVideoPosition = 0;
         private long _lastSavedProgressMs = -1;
         private bool _libVLCReady = false;
-        // 
+        private volatile bool _isStoppingVideo = false;        // 
         public Form1()
         {
             InitializeComponent();
@@ -196,7 +196,6 @@ namespace PictureManager
                     };
                     _mediaPlayer.EndReached += (s, ev) =>
                     {
-                        // ★ 记录触发时的文件，重播前检查是否还是它
                         string fileAtEnd = sCurrentFileName;
 
                         Task.Run(async () =>
@@ -204,24 +203,25 @@ namespace PictureManager
                             try
                             {
                                 await Task.Delay(100);
-
-                                // ★ 文件变了、空了、删了 → 不重播
                                 if (string.IsNullOrEmpty(fileAtEnd) || fileAtEnd != sCurrentFileName) return;
                                 if (!File.Exists(fileAtEnd)) return;
-
-                                // ★ 当前不是视频（用户切到图片）→ 不重播
                                 if (!videoView1.Visible) return;
+                                if (_isStoppingVideo) return;
 
-                                _mediaPlayer.Stop();
-                                await Task.Delay(50);
+                                _mediaPlayer.Position = 0;
+                                _mediaPlayer.Play();
 
-                                // ★ Stop 后再次检查，防止 Stop 期间用户删除/切行
-                                if (fileAtEnd != sCurrentFileName) return;
-                                if (!File.Exists(fileAtEnd)) return;
-                                if (!videoView1.Visible) return;
+                                await Task.Delay(200);
+                                if (_mediaPlayer.State != VLCState.Playing)
+                                {
+                                    if (fileAtEnd != sCurrentFileName) return;
+                                    if (!File.Exists(fileAtEnd)) return;
+                                    if (!videoView1.Visible) return;
+                                    if (_isStoppingVideo) return;
 
-                                var media = new Media(_libVLC, fileAtEnd, FromType.FromPath);
-                                _mediaPlayer.Play(media);
+                                    var media = new Media(_libVLC, fileAtEnd, FromType.FromPath);
+                                    _mediaPlayer.Play(media);
+                                }
                             }
                             catch { }
                         });

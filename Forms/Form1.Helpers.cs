@@ -430,28 +430,35 @@ namespace PictureManager
         /// </summary>
         private void StopCurrentVideo()
         {
-            _videoLoadCts?.Cancel();
-            _videoLoadCts?.Dispose();
-            _videoLoadCts = null;
-
-            SaveCurrentVideoProgress();
-            _currentVideoFingerprint = null;
-            timer1.Stop();
-
-            var mp = _mediaPlayer;
-            if (mp != null)
+            _isStoppingVideo = true;
+            try
             {
-                // ★ Stop 同步等，确保 Play 前 Stop 完成（最多 500ms）
-                var stopTask = Task.Run(() => { try { mp.Stop(); } catch { } });
-                stopTask.Wait(500);
+                _videoLoadCts?.Cancel();
+                _videoLoadCts?.Dispose();
+                _videoLoadCts = null;
+
+                SaveCurrentVideoProgress();
+                _currentVideoFingerprint = null;
+                timer1.Stop();
+
+                var mp = _mediaPlayer;
+                if (mp != null)
+                {
+                    var stopTask = Task.Run(() => { try { mp.Stop(); } catch { } });
+                    stopTask.Wait(500);
+                }
+
+                videoView1.MediaPlayer = null;
+                videoView1.Visible = false;
+                trackBar1.Visible = false;
+                trackBar1.Value = 0;
+
+                sCurrentFileName = "";
             }
-
-            videoView1.MediaPlayer = null;
-            videoView1.Visible = false;
-            trackBar1.Visible = false;
-            trackBar1.Value = 0;
-
-            sCurrentFileName = "";
+            finally
+            {
+                _isStoppingVideo = false;
+            }
         }
 
         private void btnShow_Click(object sender, EventArgs e)

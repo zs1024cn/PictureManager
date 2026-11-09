@@ -272,6 +272,7 @@ namespace PictureManager
             }
 
             videoView1.MediaPlayer = _mediaPlayer;
+            Thread.Sleep(50);
 
             timer1.Stop();
             trackBar1.Value = 0;
