@@ -147,7 +147,15 @@ namespace PictureManager
                             selectedFiles.Add(f);
                     }
                 }
-                ShowAlbum(dirFiles, selectedFiles);
+                if (dirFiles.Count == 0)
+                {
+                    // ★ 无图片，打开资源管理器
+                    FileUtility.ExploreDirectory(dir);
+                }
+                else
+                {
+                    ShowAlbum(dirFiles, selectedFiles);
+                }
                 e.Handled = true;
             }
             else if (k == Keys.F9)
