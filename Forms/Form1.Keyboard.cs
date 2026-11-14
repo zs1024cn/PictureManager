@@ -323,6 +323,8 @@ namespace PictureManager
             else if (k == Keys.E && e.Control)
             {
                 MaskFace(sCurrentFileName);
+                sCurrentFileName = "";
+                ShowPicture();
                 e.Handled = true;
             }
             else if (k == Keys.V && !e.Control)
