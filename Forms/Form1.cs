@@ -98,6 +98,7 @@ namespace PictureManager
         private bool _MetaEnabled = true;//是否启动meta,当false时，btnNamesize只检查文件名+size。否则用meta值来判定重复
 
         private bool _isFormLoadFinished = false;
+        private bool _isClosing = false;
         private string _pendingVideoFile = null;
 
         private long _cachedVideoLength = 0;
@@ -290,16 +291,11 @@ namespace PictureManager
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            SaveLastFile();
-
-            // 等待队列清空
-            while (!FileUtility._filesToDelete.IsEmpty)
+            if (_isClosing)
             {
-                Application.DoEvents();
-                Thread.Sleep(100);
+                e.Cancel = true;   // 已在退出流程中，忽略重复关闭
+                return;
             }
-            
-            FileUtility.ShowCursor();
 
             var result = MessageBox.Show(
        "确定要退出程序吗？",
@@ -312,6 +308,20 @@ namespace PictureManager
                 e.Cancel = true;  // 取消关闭
                 return;
             }
+
+            _isClosing = true;
+
+            SaveLastFile();
+
+            // 最多等 3 秒，让正在处理的删除批次收尾
+            var deadline = DateTime.UtcNow.AddSeconds(3);
+            while (FileUtility._hasDeleteBatch && DateTime.UtcNow < deadline)
+            {
+                Application.DoEvents();
+                Thread.Sleep(100);
+            }
+
+            FileUtility.ShowCursor();
 
             SaveForumConfig();
 

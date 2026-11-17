@@ -104,7 +104,7 @@ namespace PictureManager
                     using (var result = new Mat())
                     {
                         Cv2.AddWeighted(img, 1.5, blur, -0.5, 0, result);
-                        byte[] jpegBytes = img.ImEncode(".jpg");
+                        byte[] jpegBytes = result.ImEncode(".jpg");
                         File.WriteAllBytes(file, jpegBytes);
                     }
                 }
@@ -119,7 +119,7 @@ namespace PictureManager
                 using (var smooth = new Mat())
                 {
                     Cv2.EdgePreservingFilter(img, smooth, EdgePreservingMethods.RecursFilter, 60, 0.4f);
-                    byte[] jpegBytes = img.ImEncode(".jpg");
+                    byte[] jpegBytes = smooth.ImEncode(".jpg");
                     File.WriteAllBytes(file, jpegBytes);
                 }
             }

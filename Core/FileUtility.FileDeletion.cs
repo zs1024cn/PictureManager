@@ -12,59 +12,83 @@ namespace PictureManager
 {
     public partial class FileUtility
     {
-        public static ConcurrentQueue<string> _filesToDelete = new ConcurrentQueue<string>();
+        public sealed class DeleteItem
+        {
+            public string File;
+            public string TmpDirectory;
+            public MyDb Db;
+        }
+
+        public static ConcurrentQueue<DeleteItem> _filesToDelete = new ConcurrentQueue<DeleteItem>();
         private static bool _isDeleteConsuming = false;
+        public static volatile bool _hasDeleteBatch = false;
 
         // ========== 删除队列 ==========
 
         public static void EnqueueDelete(string file, string tmpDirectory, MyDb db = null)
         {
-            _filesToDelete.Enqueue(file);
-            StartConsumer(tmpDirectory, db);
+            _filesToDelete.Enqueue(new DeleteItem { File = file, TmpDirectory = tmpDirectory, Db = db });
+            StartConsumer();
         }
 
-        private static void StartConsumer(string tmpDirectory, MyDb db)
+        private static void StartConsumer()
         {
             if (_isDeleteConsuming) return;
             _isDeleteConsuming = true;
-            Task.Run(() => ConsumeLoop(tmpDirectory, db));
+            Task.Run(() => ConsumeLoop());
         }
 
-        private static async Task ConsumeLoop(string tmpDirectory, MyDb db)
+        private static async Task ConsumeLoop()
         {
             while (true)
             {
-                var batch = new List<string>();
-                while (_filesToDelete.TryDequeue(out string file))
+                var batch = new List<DeleteItem>();
+                while (_filesToDelete.TryDequeue(out DeleteItem item))
                 {
-                    if (File.Exists(file))
-                        batch.Add(file);
+                    if (item != null && File.Exists(item.File))
+                        batch.Add(item);
                 }
 
                 if (batch.Count > 0)
                 {
-                    batch = batch.Distinct().ToList();
-                    for (int i = 0; i < batch.Count; i++)
+                    _hasDeleteBatch = true;
+                    try
                     {
-                        try
+                        var seen = new HashSet<string>();
+                        batch = batch.Where(i => seen.Add(i.File)).ToList();
+                        for (int i = 0; i < batch.Count; i++)
                         {
-                            string file = batch[i];
-                            if (tmpDirectory != "")
+                            try
                             {
-                                string relativePath = file.Substring(Path.GetPathRoot(file).Length);
-                                string destPath = Path.Combine(tmpDirectory, relativePath.TrimStart('\\'));
-                                Directory.CreateDirectory(Path.GetDirectoryName(destPath));
-                                File.Move(file, destPath);
+                                DeleteItem item = batch[i];
+                                string file = item.File;
+                                if (item.TmpDirectory != "")
+                                {
+                                    string relativePath = file.Substring(Path.GetPathRoot(file).Length);
+                                    string destPath = Path.Combine(item.TmpDirectory, relativePath.TrimStart('\\'));
+                                    Directory.CreateDirectory(Path.GetDirectoryName(destPath));
+                                    if (File.Exists(destPath))
+                                        File.Delete(file);
+                                    else
+                                        File.Move(file, destPath);
+                                }
+                                else
+                                    File.Delete(file);
                             }
-                            else
-                                File.Delete(file);
+                            catch { }
                         }
-                        catch { }
-                    }
 
-                    var existingFiles = batch.Where(f => !File.Exists(f)).ToList();
-                    if (existingFiles.Count > 0 && db != null)
-                        db.SetRemoveTagBatchDeferred(existingFiles, 1);
+                        var existingFiles = batch.Where(i => !File.Exists(i.File)).ToList();
+                        foreach (var group in existingFiles.GroupBy(i => i.Db))
+                        {
+                            if (group.Key != null)
+                                group.Key.SetRemoveTagBatchDeferred(group.Select(i => i.File).ToList(), 1);
+                        }
+                    }
+                    finally
+                    {
+                        _hasDeleteBatch = false;
+                    }
                 }
                 else
                 {
