@@ -113,7 +113,7 @@ namespace PictureManager
             Keys k = e.KeyCode;
             if (dg1.CurrentRow == null) return;
             string filePath = dg1.CurrentRow.Cells["Name"].Value?.ToString();
-            if (filePath == "") return;
+            if (string.IsNullOrEmpty(filePath)) return;
 
             if (k == Keys.Delete || k == Keys.D)
             {

@@ -158,18 +158,24 @@ namespace PictureManager
                     int maxWidth = this.Width - this.chromBrowser.Left - 20;
                     int maxHeight = this.Height - this.chromBrowser.Top - 50;
 
-                    if (_PictureMode == "H")
-                    {
-                        // 先显示一个黑色遮罩，等图片转完 base64 再替换
-                        chromBrowser.LoadHtml("<html><body style='background:#000'></body></html>", "about:blank");
-                        await Task.Delay(50);  // 等遮罩渲染
+                    string mode = _PictureMode;
+                    int vw = maxWidth;
+                    int vh = maxHeight;
+                    int ratio = _PictureSizeRatio;
 
-                        // 先尝试用 OpenCV 转 Base64（解决各种兼容性问题）
-                        html = FileUtility.GenerateImageHtmlWithBase64(sFileName, maxWidth, maxHeight);
-                    }
-                    else if (_PictureMode == "M")
+                    if (mode == "H")
                     {
-                        byte[] data = File.ReadAllBytes(sFileName);
+                        // 先显示黑色遮罩，后台转完再替换
+                        chromBrowser.LoadHtml("<html><body style='background:#000'></body></html>", "about:blank");
+
+                        html = await Task.Run(() => FileUtility.GenerateImageHtmlWithBase64(sFileName, vw, vh));
+                        if (sCurrentFileName != sFileName) return;
+                    }
+                    else if (mode == "M")
+                    {
+                        byte[] data = await Task.Run(() => File.ReadAllBytes(sFileName));
+                        if (sCurrentFileName != sFileName) return;
+
                         // 检测 HEIC
                         if (data.Length > 12 && data[4] == 0x66 && data[5] == 0x74 && data[6] == 0x79 && data[7] == 0x70)
                         {
@@ -177,16 +183,18 @@ namespace PictureManager
                         }
                         else
                         {
-                            string base64 = Convert.ToBase64String(data);
                             string mime = FileUtility.GetMimeType(Path.GetExtension(sFileName).ToLower());
-                            html = FileUtility.GenerateImageHtmlWithBase64Direct(base64, mime, _PictureSizeRatio);
+                            html = await Task.Run(() => FileUtility.GenerateImageHtmlWithScaledBase64(data, mime, vw, vh, ratio));
+                            if (sCurrentFileName != sFileName) return;
                         }
                     }
-                    else if (_PictureMode == "S")
+                    else
                     {
-                        // 直接用 file:// 方式加载
-                        html = FileUtility.GenerateImageHtml_Simple(sFileName, maxWidth, maxHeight);
+                        // S：直接用 file:// 方式加载
+                        html = FileUtility.GenerateImageHtml_Simple(sFileName, vw, vh);
                     }
+
+                    if (sCurrentFileName != sFileName) return;
                     chromBrowser.LoadHtml(html, "file:///");
                 }
                 else if (isText)
