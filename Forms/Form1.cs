@@ -54,8 +54,11 @@ namespace PictureManager
         private static extern bool AllocConsole();
         private ConcurrentDictionary<string, string> _fingerprintCache = new ConcurrentDictionary<string, string>(); //从数据库全部载入
         private string _forumConfigPath = Path.Combine(Application.StartupPath, "forum_config.json");
-        private string _PictureMode = "M";//simple,middle,heavy
+        private string _PictureMode = "S";//simple,middle,heavy
         private int _PictureSizeRatio = 100;
+        private readonly System.Diagnostics.Stopwatch _picLoadWatch = new System.Diagnostics.Stopwatch();
+        private bool _awaitingRender = false;
+        private string _lastFileSizeText = "";
         private Microsoft.Web.WebView2.WinForms.WebView2 _downloadBrowser;
         private bool _downloadBrowserReady = false;
         private static readonly Random Random = new Random();
@@ -136,6 +139,8 @@ namespace PictureManager
             this.btnCalc.MouseDown += btnWorkflow_MouseDown;
             // 初始化加载模式
             btnLoadView.Text = "Load 🔄";
+            this.toolStripStatusLabelPictureMode.Text = "PM:" + _PictureMode + $" {_PictureSizeRatio}%";
+            this.chromBrowser.LoadingStateChanged += ChromBrowser_LoadingStateChanged;
             // 初始化对比器
             PictureCompareManager.RegisterDefaults();
 

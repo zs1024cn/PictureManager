@@ -114,6 +114,8 @@ namespace PictureManager
 
                 if (isVideo)
                 {
+                    _picLoadWatch.Stop();
+                    _awaitingRender = false;
                     // ★ 先显示控件（句柄可能还没建，但 Visible 会触发布局）
                     videoView1.Visible = true;
                     trackBar1.Visible = true;
@@ -138,6 +140,8 @@ namespace PictureManager
                 }
                 else if (isImage)
                 {
+                    _picLoadWatch.Restart();
+                    _awaitingRender = false;
                     timer1.Stop();
                     SaveCurrentVideoProgress();
                     _currentVideoFingerprint = null;
@@ -191,14 +195,17 @@ namespace PictureManager
                     else
                     {
                         // S：直接用 file:// 方式加载
-                        html = FileUtility.GenerateImageHtml_Simple(sFileName, vw, vh);
+                        html = FileUtility.GenerateImageHtml_Simple(sFileName, vw, vh, ratio);
                     }
 
                     if (sCurrentFileName != sFileName) return;
+                    _awaitingRender = true;
                     chromBrowser.LoadHtml(html, "file:///");
                 }
                 else if (isText)
                 {
+                    _picLoadWatch.Restart();
+                    _awaitingRender = false;
                     timer1.Stop();
                     try { _mediaPlayer?.Stop(); } catch { }
                     videoView1.MediaPlayer = null;
@@ -216,6 +223,7 @@ namespace PictureManager
                     {
                         chromBrowser.Load(sFileName);
                     }
+                    _awaitingRender = true;
                     // 恢复阅读进度（延迟等页面加载完成）
                     _ = Task.Delay(300, token).ContinueWith(_ =>
                     {
@@ -237,7 +245,8 @@ namespace PictureManager
                 }
 
                 FileInfo fi = new FileInfo(sFileName);
-                toolStripStatusLabelSize.Text = FileUtility.FormatFileSize(fi.Length);
+                _lastFileSizeText = FileUtility.FormatFileSize(fi.Length);
+                toolStripStatusLabelSize.Text = _lastFileSizeText;
             }
             catch (OperationCanceledException)
             {
@@ -253,6 +262,18 @@ namespace PictureManager
 
             }
             _lastShowPictureTime = DateTime.Now;
+        }
+        private void ChromBrowser_LoadingStateChanged(object sender, CefSharp.LoadingStateChangedEventArgs e)
+        {
+            if (e.IsLoading || !_awaitingRender) return;
+            _awaitingRender = false;
+            _picLoadWatch.Stop();
+            long ms = _picLoadWatch.ElapsedMilliseconds;
+            string sizeText = _lastFileSizeText;
+            BeginInvoke(new Action(() =>
+            {
+                toolStripStatusLabelSize.Text = $"{sizeText} ({ms}ms)";
+            }));
         }
         private void VideoView_HandleCreated(object sender, EventArgs e)
         {

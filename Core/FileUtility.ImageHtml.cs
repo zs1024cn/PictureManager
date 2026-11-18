@@ -12,17 +12,18 @@ namespace PictureManager
     {
         // ========== HTML 生成 ==========
 
-        public static string GenerateImageHtml_Simple(string imagePath, int maxWidth, int maxHeight)
+        public static string GenerateImageHtml_Simple(string imagePath, int maxWidth, int maxHeight, int ratio = 100)
         {
             string fileUrl = new Uri(imagePath).AbsoluteUri;
+            float scale = ratio / 100f;
 
             return $@"
 <!DOCTYPE html>
 <html>
 <head><meta charset='UTF-8'><style>
 *{{margin:0;padding:0}}
-html,body{{width:100%;height:100vh;display:flex;justify-content:center;align-items:center;background:#000;overflow:hidden}}
-img{{width:100%;height:100vh;object-fit:contain}}
+html,body{{width:100%;height:100vh;display:flex;justify-content:center;align-items:center;background:#000;overflow:auto}}
+img{{width:100%;height:100vh;object-fit:contain;transform:scale({scale});transform-origin:center center}}
 </style></head>
 <body><img src='{fileUrl}'/></body>
 </html>";
