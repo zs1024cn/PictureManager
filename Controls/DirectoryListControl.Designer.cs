@@ -43,9 +43,10 @@ namespace PictureManager.Controls
             this.clbDirectories.CheckOnClick = true;
             this.clbDirectories.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.clbDirectories.FormattingEnabled = true;
-            this.clbDirectories.Location = new System.Drawing.Point(5, 10);
+            this.clbDirectories.Location = new System.Drawing.Point(7, 12);
+            this.clbDirectories.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.clbDirectories.Name = "clbDirectories";
-            this.clbDirectories.Size = new System.Drawing.Size(542, 298);
+            this.clbDirectories.Size = new System.Drawing.Size(721, 354);
             this.clbDirectories.TabIndex = 0;
             // 
             // txtNewDirectory
@@ -53,9 +54,10 @@ namespace PictureManager.Controls
             this.txtNewDirectory.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtNewDirectory.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.txtNewDirectory.Location = new System.Drawing.Point(61, 311);
+            this.txtNewDirectory.Location = new System.Drawing.Point(81, 389);
+            this.txtNewDirectory.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.txtNewDirectory.Name = "txtNewDirectory";
-            this.txtNewDirectory.Size = new System.Drawing.Size(364, 26);
+            this.txtNewDirectory.Size = new System.Drawing.Size(484, 30);
             this.txtNewDirectory.TabIndex = 1;
             // 
             // btnAdd
@@ -63,9 +65,10 @@ namespace PictureManager.Controls
             this.btnAdd.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnAdd.BackColor = System.Drawing.Color.MistyRose;
             this.btnAdd.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.btnAdd.Location = new System.Drawing.Point(431, 311);
+            this.btnAdd.Location = new System.Drawing.Point(575, 389);
+            this.btnAdd.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnAdd.Name = "btnAdd";
-            this.btnAdd.Size = new System.Drawing.Size(50, 33);
+            this.btnAdd.Size = new System.Drawing.Size(67, 41);
             this.btnAdd.TabIndex = 2;
             this.btnAdd.Text = "添加";
             this.btnAdd.UseVisualStyleBackColor = false;
@@ -76,9 +79,10 @@ namespace PictureManager.Controls
             this.btnBrowse.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.btnBrowse.BackColor = System.Drawing.Color.PaleGreen;
             this.btnBrowse.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.btnBrowse.Location = new System.Drawing.Point(5, 306);
+            this.btnBrowse.Location = new System.Drawing.Point(7, 382);
+            this.btnBrowse.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnBrowse.Name = "btnBrowse";
-            this.btnBrowse.Size = new System.Drawing.Size(50, 33);
+            this.btnBrowse.Size = new System.Drawing.Size(67, 41);
             this.btnBrowse.TabIndex = 3;
             this.btnBrowse.Text = "浏览";
             this.btnBrowse.UseVisualStyleBackColor = false;
@@ -89,9 +93,10 @@ namespace PictureManager.Controls
             this.btnRemove.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
             this.btnRemove.BackColor = System.Drawing.Color.PaleTurquoise;
             this.btnRemove.Font = new System.Drawing.Font("宋体", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            this.btnRemove.Location = new System.Drawing.Point(487, 311);
+            this.btnRemove.Location = new System.Drawing.Point(649, 389);
+            this.btnRemove.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.btnRemove.Name = "btnRemove";
-            this.btnRemove.Size = new System.Drawing.Size(50, 33);
+            this.btnRemove.Size = new System.Drawing.Size(67, 41);
             this.btnRemove.TabIndex = 4;
             this.btnRemove.Text = "删除";
             this.btnRemove.UseVisualStyleBackColor = false;
@@ -99,7 +104,7 @@ namespace PictureManager.Controls
             // 
             // DirectoryListControl
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.Controls.Add(this.btnRemove);
@@ -107,8 +112,10 @@ namespace PictureManager.Controls
             this.Controls.Add(this.btnAdd);
             this.Controls.Add(this.txtNewDirectory);
             this.Controls.Add(this.clbDirectories);
+            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.Name = "DirectoryListControl";
-            this.Size = new System.Drawing.Size(550, 353);
+            this.Size = new System.Drawing.Size(733, 441);
+            this.SizeChanged += new System.EventHandler(this.DirectoryListControl_SizeChanged);
             this.ResumeLayout(false);
             this.PerformLayout();
 

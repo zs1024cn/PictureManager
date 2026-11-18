@@ -167,5 +167,15 @@ namespace PictureManager.Controls
             public string Path { get; set; }
             public bool Checked { get; set; }
         }
+
+        private void DirectoryListControl_SizeChanged(object sender, EventArgs e)
+        {
+            this.clbDirectories.Width = this.clbDirectories.Parent.Width - this.clbDirectories.Left * 2;
+            this.btnAdd.Top = this.btnAdd.Parent.Height - btnAdd.Height - 20;
+            this.btnBrowse.Top = this.btnAdd.Top;
+            this.btnRemove.Top = this.btnAdd.Top;
+            this.txtNewDirectory.Top = this.btnAdd.Top;
+            this.clbDirectories.Height = this.btnAdd.Top - 20;
+        }
     }
 }
