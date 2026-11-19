@@ -51,7 +51,15 @@ namespace PictureManager
                 this.toolStripStatusLabelFileName.Text = sFileName;
             else
                 this.toolStripStatusLabelFileName.Text = sFileName.Substring(0, 40) + "..." + sFileName.Substring(sFileName.Length - 37);
+            if (this.toolStripStatusLabelFileName.Text.Length < 70)
+                this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            else
+                this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.toolStripStatusLabelPictureMode.Font = new System.Drawing.Font("Microsoft YaHei UI", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.toolStripStatusLabelSize.BackColor = this.toolStripStatusLabelPictureMode.BackColor;
+            this.toolStripStatusLabelFileName.BackColor = this.toolStripStatusLabelPictureMode.BackColor;
             this.labelDBRecords.Text = $"DB:{_myDb._DeletedRegistryCount}/{_myDb._RegistryCount}+{_deletedMetaList.Count}";
+
 
             if (!File.Exists(sFileName))
             {
@@ -246,7 +254,7 @@ namespace PictureManager
 
                 FileInfo fi = new FileInfo(sFileName);
                 _lastFileSizeText = FileUtility.FormatFileSize(fi.Length);
-                toolStripStatusLabelSize.Text = _lastFileSizeText;
+                //toolStripStatusLabelSize.Text = _lastFileSizeText;
             }
             catch (OperationCanceledException)
             {

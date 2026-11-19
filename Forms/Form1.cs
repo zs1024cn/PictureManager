@@ -296,6 +296,7 @@ namespace PictureManager
         }
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
+            FileUtility.ShowCursor();
             if (_isClosing)
             {
                 e.Cancel = true;   // 已在退出流程中，忽略重复关闭
