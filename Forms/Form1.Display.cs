@@ -542,6 +542,18 @@ namespace PictureManager
         private void trackBar1_MouseDown(object sender, MouseEventArgs e)
         {
             _isSeeking = true;
+
+            if (e.Button != MouseButtons.Left) return;
+            if (_mediaPlayer == null || _mediaPlayer.Length <= 0) return;
+
+            const int pad = 10;                                  // 滑块半宽的粗略值
+            int span = Math.Max(1, trackBar1.Width - pad * 2);
+            double ratio = (e.X - pad) / (double)span;
+            if (ratio < 0) ratio = 0;
+            if (ratio > 1) ratio = 1;
+
+            _mediaPlayer.Position = (float)ratio;
+            trackBar1.Value = (int)Math.Round(ratio * (trackBar1.Maximum - 1));
         }
 
         private void trackBar1_Scroll(object sender, EventArgs e)
