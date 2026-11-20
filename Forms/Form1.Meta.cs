@@ -73,7 +73,7 @@ namespace PictureManager
 
             btnMeta.Enabled = false;
             DateTime d0 = DateTime.Now;
-            this.toolStripStatusLabelStatus.Text = "开始加载元数据...";
+            //this.toolStripStatusLabelStatus.Text = "开始加载元数据...";
 
             var fileList = new List<Tuple<int, string>>();
             for (int r = 0; r < dg1.Rows.Count; r++)
@@ -123,6 +123,13 @@ namespace PictureManager
                             _fingerprintCache.TryAdd(filePath, fingerprint);
                             _myDb.AddMetaDeferred(filePath, Convert.FromBase64String(fingerprint));
                         }
+                        if (i % 500 == 0)
+                        {
+                            BeginInvoke(new Action(() =>
+                            {
+                                this.toolStripStatusLabelStatus.Text = $"加载元数据 {i}/{total}...";
+                            }));
+                        }
                     }
 
                     metaResults[r] = fingerprint;
@@ -131,14 +138,6 @@ namespace PictureManager
                     {
                         heartResults[r] = meta.Heart;
                         breakResults[r] = meta.Break;
-                    }
-
-                    if (i % 500 == 0)
-                    {
-                        BeginInvoke(new Action(() =>
-                        {
-                            this.toolStripStatusLabelStatus.Text = $"加载元数据 {i}/{total}...";
-                        }));
                     }
                 });
 
@@ -175,7 +174,7 @@ namespace PictureManager
                         // ★ FlushBatch 不碰 dg1，不解绑
                         await Task.Run(() => _myDb.FlushBatch());
 
-                        this.toolStripStatusLabelStatus.Text = $"元数据加载完成 in {(DateTime.Now - d0).TotalSeconds:F1}s";
+                        //this.toolStripStatusLabelStatus.Text = $"元数据加载完成 in {(DateTime.Now - d0).TotalSeconds:F1}s";
                         btnMeta.Enabled = true;
                     }
                     catch (Exception ex)

@@ -544,6 +544,7 @@ namespace PictureManager
             if (_isFormLoadFinished)
                 SaveLastFile();
 
+            var swLoadView = System.Diagnostics.Stopwatch.StartNew();
             _TmpDirectory = this.tbTmpDirectory.Text.Trim();
 
             AlbumForm.Clear();
@@ -643,6 +644,7 @@ namespace PictureManager
                 }));
             }
             log($"loadview finished 用了 {swPhase.ElapsedMilliseconds}ms");
+            this.toolStripStatusLabelStatus.Text = $"文件列表加载 用了 {swLoadView.ElapsedMilliseconds}ms";
         }
         private void btnClearGarbage_Click(object sender, EventArgs e)
         {
