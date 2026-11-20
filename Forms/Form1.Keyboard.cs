@@ -115,7 +115,13 @@ namespace PictureManager
             string filePath = dg1.CurrentRow.Cells["Name"].Value?.ToString();
             if (string.IsNullOrEmpty(filePath)) return;
 
-            this.toolStripStatusLabelStatus.Text = e.KeyCode.ToString();
+            string keyText = $"{e.KeyCode}({(int)e.KeyCode})";
+            if (e.Control) keyText = "Ctrl+" + keyText;
+            if (e.Alt) keyText = "Alt+" + keyText;
+            if (e.Shift) keyText = "Shift+" + keyText;
+            if ((int)e.KeyCode == 229) keyText += " ← 输入法吞键";
+            this.toolStripStatusLabelStatus.Text = keyText;
+
             if (k == Keys.Delete || k == Keys.D)
             {
                 this.btnDelete();

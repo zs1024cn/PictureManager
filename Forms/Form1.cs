@@ -117,6 +117,8 @@ namespace PictureManager
        
         private async void Form1_Load(object sender, EventArgs e)
         {
+            this.dg1.ImeMode = System.Windows.Forms.ImeMode.NoControl;
+
             this.tbPageRows.Text = "400000";
             _downloadBrowser = new Microsoft.Web.WebView2.WinForms.WebView2();
             _downloadBrowser.Size = new System.Drawing.Size(1024, 768);
