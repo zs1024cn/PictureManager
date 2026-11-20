@@ -73,8 +73,8 @@ namespace PictureManager
                 if (canParallel)
                 {
                     // ★ 禁用 OpenCV 内部多线程，让外层 Parallel 独占 CPU
-                    //int oldThreads = Cv2.GetNumThreads();
-                    //Cv2.SetNumThreads(1);
+                    int oldThreads = Cv2.GetNumThreads();
+                    Cv2.SetNumThreads(1);
                     try
                     {
                         Parallel.ForEach(filesToProcess,
@@ -112,7 +112,7 @@ namespace PictureManager
                     }
                     finally
                     {
-                        //Cv2.SetNumThreads(oldThreads);
+                        Cv2.SetNumThreads(oldThreads);
                     }
                 }
                 else

@@ -94,7 +94,10 @@ namespace PictureManager
                     feature.FilePath = file;
                     feature.ExtractTime = DateTime.Now;
 
-                    using (var cropped = Duplicate.CropByIndex(mat, DuplicateSettings.HashCrop))
+                    var cropped = DuplicateSettings.HashCrop == 0
+                        ? mat
+                        : Duplicate.CropByIndex(mat, DuplicateSettings.HashCrop);
+                    try
                     {
                         feature.Hash = Duplicate.ExtractHashByMat(
                             cropped, file,
@@ -109,6 +112,10 @@ namespace PictureManager
                             DuplicateSettings.SiftMaxDim);
 
                         //feature.Hsv = Duplicate.ExtractHsvByMat(cropped, file);
+                    }
+                    finally
+                    {
+                        if (!ReferenceEquals(cropped, mat)) cropped.Dispose();
                     }
                 }
             }
@@ -135,9 +142,17 @@ namespace PictureManager
                 using (var mat = Cv2.ImDecode(fileData, ImreadModes.Color))
                 {
                     if (mat == null || mat.Empty()) return;
-                    using (var cropped = Duplicate.CropByIndex(mat, DuplicateSettings.HashCrop))
+
+                    var cropped = DuplicateSettings.HashCrop == 0
+                        ? mat
+                        : Duplicate.CropByIndex(mat, DuplicateSettings.HashCrop);
+                    try
                     {
                         feature.Dct = Duplicate.ExtractDctByMat(cropped, file);
+                    }
+                    finally
+                    {
+                        if (!ReferenceEquals(cropped, mat)) cropped.Dispose();
                     }
                 }
                 feature.FilePath = file;
@@ -159,12 +174,20 @@ namespace PictureManager
                 using (var mat = Cv2.ImDecode(fileData, ImreadModes.Color))
                 {
                     if (mat == null || mat.Empty()) return;
-                    using (var cropped = Duplicate.CropByIndex(mat, DuplicateSettings.HashCrop))
+
+                    var cropped = DuplicateSettings.HashCrop == 0
+                        ? mat
+                        : Duplicate.CropByIndex(mat, DuplicateSettings.HashCrop);
+                    try
                     {
                         feature.Sift = Duplicate.ExtractSiftByMat(
                             cropped, file,
                             DuplicateSettings.SiftMaxFeatures,
                             DuplicateSettings.SiftMaxDim);
+                    }
+                    finally
+                    {
+                        if (!ReferenceEquals(cropped, mat)) cropped.Dispose();
                     }
                 }
                 feature.FilePath = file;
