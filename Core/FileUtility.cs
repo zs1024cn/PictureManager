@@ -43,12 +43,8 @@ namespace PictureManager
                 {
                     if (src.Empty()) return null;
 
-                    byte[] data;
-                    if (size <= 0)
-                    {
-                        data = src.ImEncode(".jpg");
-                    }
-                    else
+                    // 缩略图：直接 Mat → Bitmap，省掉 JPEG 编码+解码一个来回
+                    if (size > 0)
                     {
                         using (var resized = new Mat())
                         {
@@ -56,21 +52,15 @@ namespace PictureManager
                             if (src.Width > src.Height) { w = size; h = (int)(src.Height * (size / (double)src.Width)); }
                             else { h = size; w = (int)(src.Width * (size / (double)src.Height)); }
                             Cv2.Resize(src, resized, new OpenCvSharp.Size(w, h));
-                            data = resized.ImEncode(".jpg");
+                            return OpenCvSharp.Extensions.BitmapConverter.ToBitmap(resized);
                         }
                     }
 
+                    byte[] data = src.ImEncode(".jpg");
                     using (var ms = new MemoryStream(data))
                     {
-                        try
-                        {
-                            var bmp = new Bitmap(ms);
-                            return bmp;
-                        }
-                        catch
-                        {
-                            return null;
-                        }
+                        try { return new Bitmap(ms); }
+                        catch { return null; }
                     }
                 }
             }

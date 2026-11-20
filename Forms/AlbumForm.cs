@@ -529,7 +529,7 @@ namespace PictureManager
                 {
                     try
                     {
-                        pb.Image = new Bitmap(thumb);
+                        pb.Image = thumb;
                         pb.BackColor = Color.Transparent;
                     }
                     catch { }
@@ -831,7 +831,9 @@ namespace PictureManager
         // === 缩略图缓存 ===
         private static Image GetThumbnailInternal(string file, int size)
         {
-            string cacheKey = file + "|" + size;
+            // 尺寸分档到 50 的倍数：窗口微调不再导致整页缓存失效
+            int bucket = Math.Max(50, Math.Min(400, ((size + 49) / 50) * 50));
+            string cacheKey = file + "|" + bucket;
 
             if (_thumbnailCacheFile.TryGetValue(cacheKey, out Image thumbnail))
             {
@@ -839,25 +841,23 @@ namespace PictureManager
                 catch { _thumbnailCacheFile.Remove(cacheKey); thumbnail = null; }
             }
 
-            thumbnail = FileUtility.ReadPictureToImage(file, size);
+            thumbnail = FileUtility.ReadPictureToImage(file, bucket);
 
-            if (thumbnail != null)
+            if (thumbnail == null) return null;
+
+            _thumbnailCacheFile[cacheKey] = thumbnail;
+            _thumbnailCacheFileOrder.Remove(cacheKey);
+            _thumbnailCacheFileOrder.Add(cacheKey);
+            if (_thumbnailCacheFileOrder.Count > _maxCachedFiles)
             {
-                using (var temp = new Bitmap(thumbnail))
-                    thumbnail = new Bitmap(temp);
-
-                _thumbnailCacheFile[cacheKey] = thumbnail;
-                _thumbnailCacheFileOrder.Remove(cacheKey);
-                _thumbnailCacheFileOrder.Add(cacheKey);
-                if (_thumbnailCacheFileOrder.Count > _maxCachedFiles)
-                {
-                    string oldest = _thumbnailCacheFileOrder[0];
-                    _thumbnailCacheFileOrder.RemoveAt(0);
-                    _thumbnailCacheFile[oldest]?.Dispose();
-                    _thumbnailCacheFile.Remove(oldest);
-                }
+                string oldest = _thumbnailCacheFileOrder[0];
+                _thumbnailCacheFileOrder.RemoveAt(0);
+                _thumbnailCacheFile[oldest]?.Dispose();
+                _thumbnailCacheFile.Remove(oldest);
             }
-            return thumbnail;
+
+            // 交给调用方一份副本；缓存保留原件
+            return new Bitmap(thumbnail);
         }
 
         public static void Clear(string dir = "")
