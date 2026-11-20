@@ -29,8 +29,22 @@ img{{width:100%;height:100vh;object-fit:contain;transform:scale({scale});transfo
 </html>";
         }
 
-        public static string GenerateImageHtmlWithBase64(string imagePath, int maxWidth, int maxHeight)
+        public static string GenerateImageHtmlWithBase64(string imagePath, int maxWidth, int maxHeight, int ratio = 100)
         {
+            // 动画图不能被重编码，否则只剩第一帧；原样交给 Chrome 播放
+            try
+            {
+                byte[] raw = File.ReadAllBytes(imagePath);
+                if (LooksAnimated(raw))
+                {
+                    return GenerateImageHtmlWithBase64Direct(
+                        Convert.ToBase64String(raw),
+                        GetMimeType(Path.GetExtension(imagePath).ToLower()),
+                        ratio);
+                }
+            }
+            catch { }
+
             // 先尝试 OpenCV
             try
             {
@@ -58,18 +72,7 @@ img{{width:100%;height:100vh;object-fit:contain;transform:scale({scale});transfo
                         using (converted)
                         {
                             byte[] jpegBytes = EncodeViewportJpeg(converted, maxWidth, maxHeight);
-                            string base64 = Convert.ToBase64String(jpegBytes);
-
-                            return $@"
-<!DOCTYPE html>
-<html>
-<head><meta charset='UTF-8'><style>
-*{{margin:0;padding:0}}
-html,body{{width:100%;height:100vh;display:flex;justify-content:center;align-items:center;background:#000;overflow:hidden}}
-img{{width:100%;height:100vh;object-fit:contain}}
-</style></head>
-<body><img src='data:image/jpeg;base64,{base64}'/></body>
-</html>";
+                            return GenerateImageHtmlWithBase64Direct(Convert.ToBase64String(jpegBytes), "image/jpeg", ratio);
                         }
                     }
                 }
@@ -86,17 +89,7 @@ img{{width:100%;height:100vh;object-fit:contain}}
                 using (var ms = new MemoryStream())
                 {
                     bmp.Save(ms, ImageFormat.Jpeg);
-                    string base64 = Convert.ToBase64String(ms.ToArray());
-                    return $@"
-<!DOCTYPE html>
-<html>
-<head><meta charset='UTF-8'><style>
-*{{margin:0;padding:0}}
-html,body{{width:100%;height:100vh;display:flex;justify-content:center;align-items:center;background:#000;overflow:hidden}}
-img{{width:100%;height:100vh;object-fit:contain}}
-</style></head>
-<body><img src='data:image/jpeg;base64,{base64}'/></body>
-</html>";
+                    return GenerateImageHtmlWithBase64Direct(Convert.ToBase64String(ms.ToArray()), "image/jpeg", ratio);
                 }
             }
             catch (Exception ex)
@@ -104,7 +97,7 @@ img{{width:100%;height:100vh;object-fit:contain}}
                 Console.WriteLine($"GDI+ 转换失败: {ex.Message}");
             }
 
-            return GenerateImageHtml_Simple(imagePath, maxWidth, maxHeight);
+            return GenerateImageHtml_Simple(imagePath, maxWidth, maxHeight, ratio);
         }
         /// <summary>
         /// GIF / APNG / 动画 WebP 不能被重编码，否则会变成静帧。

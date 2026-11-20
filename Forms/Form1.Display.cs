@@ -180,7 +180,7 @@ namespace PictureManager
                         // 先显示黑色遮罩，后台转完再替换
                         chromBrowser.LoadHtml("<html><body style='background:#000'></body></html>", "about:blank");
 
-                        html = await Task.Run(() => FileUtility.GenerateImageHtmlWithBase64(sFileName, vw, vh));
+                        html = await Task.Run(() => FileUtility.GenerateImageHtmlWithBase64(sFileName, vw, vh, ratio));
                         if (sCurrentFileName != sFileName) return;
                     }
                     else if (mode == "M")
