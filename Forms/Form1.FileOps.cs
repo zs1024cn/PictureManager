@@ -90,8 +90,7 @@ namespace PictureManager
                     filesToDelete.Add(filePath);
                     if (MarkGarbage)
                     {
-                        string meta = dg1.Rows[i].Cells["Meta"].Value?.ToString();
-                        if (!string.IsNullOrEmpty(meta))
+                        if (_fingerprintCache.TryGetValue(filePath, out string meta) && !string.IsNullOrEmpty(meta))
                             _deletedMetaList.Add(meta);
 
                     }
@@ -294,9 +293,9 @@ MessageBoxIcon.Question);
 
             for (int i = dg1.Rows.Count - 1; i >= 0; i--)
             {
-                string meta = dg1.Rows[i].Cells["Meta"].Value?.ToString();
                 string filePath = dg1.Rows[i].Cells["Name"].Value?.ToString();
-                if (!string.IsNullOrEmpty(meta) && !string.IsNullOrEmpty(filePath) && _deletedMetaList.Contains(meta))
+                if (string.IsNullOrEmpty(filePath)) continue;
+                if (_fingerprintCache.TryGetValue(filePath, out string meta) && !string.IsNullOrEmpty(meta) && _deletedMetaList.Contains(meta))
                 {
                     result.Add(filePath);
                     RemoveDatagridRows(i);
@@ -313,7 +312,7 @@ MessageBoxIcon.Question);
 
             dg1.CurrentCellChanged -= dg1_CurrentCellChanged;
 
-            if (this.cb删除文件扩大化.Checked && dg1.Columns.Contains("Meta") && _MetaEnabled)
+            if (this.cb删除文件扩大化.Checked && _MetaEnabled)
                 filesToDelete.AddRange(GetFilesFromDeletedMetaList());
 
             var seenKeys = new HashSet<string>();
@@ -325,8 +324,7 @@ MessageBoxIcon.Question);
                 string key;
                 if (_MetaEnabled)
                 {
-                    string meta = dg1.Rows[i].Cells["Meta"].Value?.ToString();
-                    if (string.IsNullOrEmpty(meta)) continue;
+                    if (!_fingerprintCache.TryGetValue(file, out string meta) || string.IsNullOrEmpty(meta)) continue;
                     key = meta;
                 }
                 else

@@ -167,6 +167,56 @@ namespace PictureManager
             }
         }
         /// <summary>
+        /// 鲜眼：按比例提升饱和度（灰色保持灰、高饱和不溢出），并加一点点对比。
+        /// 每调用一次在原图基础上叠加一档。
+        /// </summary>
+        public static void ApplyVivid(string file, double k = 0.6, double contrast = 0.03)
+        {
+            using (var img = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
+            {
+                if (img.Empty()) return;
+
+                // 8 位通道只有 256 种取值：先算好查找表，比逐像素/浮点运算都快且稳定
+                byte[] sLut = new byte[256];
+                byte[] vLut = new byte[256];
+                for (int i = 0; i < 256; i++)
+                {
+                    double s2 = i * (1.0 + k * (1.0 - i / 255.0));           // 灰色(0) → 0
+                    double v2 = 128.0 + (i - 128.0) * (1.0 + contrast);
+                    sLut[i] = (byte)Math.Max(0, Math.Min(255, Math.Round(s2)));
+                    vLut[i] = (byte)Math.Max(0, Math.Min(255, Math.Round(v2)));
+                }
+
+                using (var hsv = new Mat())
+                using (var sLutMat = new Mat(256, 1, MatType.CV_8UC1))
+                using (var vLutMat = new Mat(256, 1, MatType.CV_8UC1))
+                {
+                    sLutMat.SetArray(sLut);
+                    vLutMat.SetArray(vLut);
+
+                    Cv2.CvtColor(img, hsv, ColorConversionCodes.BGR2HSV);
+
+                    Mat[] ch = Cv2.Split(hsv);
+                    try
+                    {
+                        Cv2.LUT(ch[1], sLutMat, ch[1]);   // S 通道
+                        Cv2.LUT(ch[2], vLutMat, ch[2]);   // V 通道
+                        Cv2.Merge(ch, hsv);
+                    }
+                    finally
+                    {
+                        foreach (var c in ch) c.Dispose();
+                    }
+
+                    using (var bgr = new Mat())
+                    {
+                        Cv2.CvtColor(hsv, bgr, ColorConversionCodes.HSV2BGR);
+                        File.WriteAllBytes(file, bgr.ImEncode(".jpg"));
+                    }
+                }
+            }
+        }
+        /// <summary>
         /// 颜色增强。在 HSV 空间提升目标色相的饱和度。
         /// c: 目标颜色（红/绿/蓝）。
         /// </summary>

@@ -64,9 +64,6 @@ namespace PictureManager
                 this.dg1.Columns["Size"].ValueType = typeof(long);
                 this.dg1.Columns.Add("Date", "Date");
                 this.dg1.Columns["Date"].ValueType = typeof(DateTime);
-                // 新增 Meta 列（指纹列，放最右边）
-                this.dg1.Columns.Add("Meta", "Meta");
-                //this.dg1.Columns["Meta"].Visible = false;  // 隐藏，不需要显示
 
                 this.dg1.Columns["ID"].SortMode = DataGridViewColumnSortMode.NotSortable;
             }
@@ -95,14 +92,13 @@ namespace PictureManager
                 for (int i = existingRowCount; i < alFile.Count; i++)
                 {
                     FileInfo fi = (FileInfo)alFile[i];
-                    object[] o = new object[7];
+                    object[] o = new object[6];
                     o[0] = 0;
                     o[1] = 0;
                     o[2] = i;                 // ★ 批次未提交时 Rows.Count 不准，直接用序号
                     o[3] = fi.FullName;
                     o[4] = fi.Length;
                     o[5] = fi.LastWriteTime;
-                    o[6] = null;
 
                     var row = new DataGridViewRow();
                     row.CreateCells(this.dg1, o);
@@ -644,7 +640,7 @@ namespace PictureManager
                 }));
             }
             log($"loadview finished 用了 {swPhase.ElapsedMilliseconds}ms");
-            this.toolStripStatusLabelStatus.Text = $"文件列表加载 用了 {swLoadView.ElapsedMilliseconds}ms";
+            _lastLoadViewMs = swLoadView.ElapsedMilliseconds;
         }
         private void btnClearGarbage_Click(object sender, EventArgs e)
         {

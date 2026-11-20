@@ -73,7 +73,7 @@ namespace PictureManager
 
             btnMeta.Enabled = false;
             DateTime d0 = DateTime.Now;
-            //this.toolStripStatusLabelStatus.Text = "开始加载元数据...";
+            this.toolStripStatusLabelStatus.Text = "开始加载元数据...";
 
             var fileList = new List<Tuple<int, string>>();
             for (int r = 0; r < dg1.Rows.Count; r++)
@@ -123,13 +123,15 @@ namespace PictureManager
                             _fingerprintCache.TryAdd(filePath, fingerprint);
                             _myDb.AddMetaDeferred(filePath, Convert.FromBase64String(fingerprint));
                         }
-                        if (i % 500 == 0)
+                    }
+
+                    if (i % 500 == 0)
+                    {
+                        int done = i;
+                        BeginInvoke(new Action(() =>
                         {
-                            BeginInvoke(new Action(() =>
-                            {
-                                this.toolStripStatusLabelStatus.Text = $"加载元数据 {i}/{total}...";
-                            }));
-                        }
+                            this.toolStripStatusLabelStatus.Text = $"加载元数据 {done}/{total}...";
+                        }));
                     }
 
                     metaResults[r] = fingerprint;
@@ -159,11 +161,6 @@ namespace PictureManager
                                 if (kvp.Key < dg1.Rows.Count)
                                     dg1.Rows[kvp.Key].Cells["break"].Value = kvp.Value;
                             }
-                            foreach (var kvp in metaResults)
-                            {
-                                if (kvp.Key < dg1.Rows.Count)
-                                    dg1.Rows[kvp.Key].Cells["Meta"].Value = kvp.Value;
-                            }
                         }
                         finally
                         {
@@ -174,7 +171,8 @@ namespace PictureManager
                         // ★ FlushBatch 不碰 dg1，不解绑
                         await Task.Run(() => _myDb.FlushBatch());
 
-                        //this.toolStripStatusLabelStatus.Text = $"元数据加载完成 in {(DateTime.Now - d0).TotalSeconds:F1}s";
+                        string loadInfo = _lastLoadViewMs > 0 ? $" ｜{_lastLoadViewMs}ms" : "";
+                        this.toolStripStatusLabelStatus.Text = $"元数据加载完成 in {(DateTime.Now - d0).TotalSeconds:F1}s{loadInfo}";
                         btnMeta.Enabled = true;
                     }
                     catch (Exception ex)

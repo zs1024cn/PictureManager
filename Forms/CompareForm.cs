@@ -270,10 +270,21 @@ namespace PictureManager
                 Location = new System.Drawing.Point(10, ApplySharpenButton.Bottom + 20),
                 ForeColor = Color.White,
                 Font = headerFont,
-                Size = new System.Drawing.Size(180, 40)
+                Size = new System.Drawing.Size(80, 40)
             };
             ClearButton.Click += ClearButton_Click;
             leftPanel.Controls.Add(ClearButton);
+
+            var VividButton = new Button
+            {
+                Text = "鲜艳",
+                Location = new System.Drawing.Point(mergeButton.Right - 80, ApplySharpenButton.Bottom + 20),
+                ForeColor = Color.White,
+                Font = headerFont,
+                Size = new System.Drawing.Size(80, 40)
+            };
+            VividButton.Click += ApplyVividButton_Click;
+            leftPanel.Controls.Add(VividButton);
 
             var PhotoButton = new Button
             {
@@ -446,6 +457,11 @@ namespace PictureManager
         private void ClearButton_Click(object sender, EventArgs e)
         {
             FileUtility.MakeClear(_rightFilePath);
+            LoadRightImage();
+        }
+        private void ApplyVividButton_Click(object sender, EventArgs e)
+        {
+            FileUtility.ApplyVivid(_rightFilePath);
             LoadRightImage();
         }
         private async void PhotoButton_Click(object sender, EventArgs e)

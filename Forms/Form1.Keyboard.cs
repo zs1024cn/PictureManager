@@ -115,6 +115,7 @@ namespace PictureManager
             string filePath = dg1.CurrentRow.Cells["Name"].Value?.ToString();
             if (string.IsNullOrEmpty(filePath)) return;
 
+            this.toolStripStatusLabelStatus.Text = e.KeyCode.ToString();
             if (k == Keys.Delete || k == Keys.D)
             {
                 this.btnDelete();

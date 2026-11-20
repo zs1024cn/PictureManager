@@ -51,7 +51,7 @@ namespace PictureManager
                 this.toolStripStatusLabelFileName.Text = sFileName;
             else
                 this.toolStripStatusLabelFileName.Text = sFileName.Substring(0, 40) + "..." + sFileName.Substring(sFileName.Length - 37);
-            if (this.toolStripStatusLabelFileName.Text.Length < 70)
+            if (this.toolStripStatusLabelFileName.Text.Length < 100)
                 this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             else
                 this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
@@ -77,28 +77,17 @@ namespace PictureManager
             // =============================================
 
             // ========== 懒加载当前行的点赞数据 ==========
-            string existingMeta = dg1.Rows[r].Cells["Meta"].Value?.ToString();
+            _fingerprintCache.TryGetValue(sFileName, out string existingMeta);
 
             if (string.IsNullOrEmpty(existingMeta))
             {
-                // ★ M292：读指纹改异步，避免 UI 线程同步读磁盘卡死
+                // ★ 读指纹改异步，避免 UI 线程同步读磁盘卡死
                 existingMeta = await Task.Run(() => GetFileFingerprintCached(sFileName));
 
                 // ★ 异步返回后，检查当前行是否还是原来那行（用户可能已切换）
                 if (dg1.CurrentRow == null || dg1.CurrentRow.Index != r) return;
 
-                dg1.Rows[r].Cells["Meta"].Value = existingMeta;
-
-                if (_fileMeta.TryGetValue(existingMeta, out FileMeta meta))
-                {
-                    this.dg1.Rows[r].Cells["heart"].Value = meta.Heart;
-                    this.dg1.Rows[r].Cells["break"].Value = meta.Break;
-                }
-            }
-            // 如果 Meta 列有值，但 heart/break 为空（可能还没加载点赞数据）
-            else if (dg1.Rows[r].Cells["heart"].Value == null || dg1.Rows[r].Cells["heart"].Value == DBNull.Value)
-            {
-                if (_fileMeta.TryGetValue(existingMeta, out FileMeta meta))
+                if (!string.IsNullOrEmpty(existingMeta) && _fileMeta.TryGetValue(existingMeta, out FileMeta meta))
                 {
                     this.dg1.Rows[r].Cells["heart"].Value = meta.Heart;
                     this.dg1.Rows[r].Cells["break"].Value = meta.Break;

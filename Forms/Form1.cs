@@ -59,6 +59,7 @@ namespace PictureManager
         private readonly System.Diagnostics.Stopwatch _picLoadWatch = new System.Diagnostics.Stopwatch();
         private bool _awaitingRender = false;
         private string _lastFileSizeText = "";
+        private long _lastLoadViewMs = 0;
         private Microsoft.Web.WebView2.WinForms.WebView2 _downloadBrowser;
         private bool _downloadBrowserReady = false;
         private static readonly Random Random = new Random();
