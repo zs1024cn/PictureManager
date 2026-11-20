@@ -167,30 +167,24 @@ namespace PictureManager
                         resizeMs = swResize.ElapsedMilliseconds;
 
                         using (resized)
-                        using (var sift = SIFT.Create(maxFeatures))
                         {
                             var swSift = Stopwatch.StartNew();
+                            var sift = SIFT.Create(maxFeatures);
                             sift.DetectAndCompute(resized, null, out kp, desc);
                             siftMs = swSift.ElapsedMilliseconds;
                         }
                     }
                     else
                     {
-                        using (var sift2 = SIFT.Create(maxFeatures))
-                        {
-                            var swSift = Stopwatch.StartNew();
-                            sift2.DetectAndCompute(gray, null, out kp, desc);
-                            siftMs = swSift.ElapsedMilliseconds;
-                        }
+                        var swSift = Stopwatch.StartNew();
+                        var sift2 = SIFT.Create(maxFeatures);
+                        sift2.DetectAndCompute(gray, null, out kp, desc);
+                        siftMs = swSift.ElapsedMilliseconds;
                     }
 
                     swTotal.Stop();
 
-                    if (kp == null || kp.Length == 0)
-                    {
-                        desc?.Dispose();
-                        return null;
-                    }
+                    if (kp == null || kp.Length == 0) return null;
 
                     if (_siftExtractLogCount < 20)
                     {
