@@ -46,6 +46,8 @@ namespace PictureManager
         private static Dictionary<string, Image> _thumbnailCacheFile = new Dictionary<string, Image>();
         private static List<string> _thumbnailCacheFileOrder = new List<string>();
         private static int _maxCachedFiles = 1000;
+        private int _pageGeneration = 0;
+        private static readonly SemaphoreSlim _thumbSemaphore = new SemaphoreSlim(4);
         public static int ThumbnailLimit = 100; //每页显示几个缩略图
         private List<string> _sourceFiles;
         private bool _filesDeletedFired = false;
@@ -501,6 +503,8 @@ namespace PictureManager
             _panel.Controls.Clear();
             _thumbnails.Clear();
 
+            int gen = ++_pageGeneration;
+            var pageFiles = new List<string>();
             var controlsToAdd = new List<Control>();
             for (int i = start; i < end; i++)
             {
@@ -522,18 +526,9 @@ namespace PictureManager
                 pb.MouseClick += Pb_MouseClick;
 
                 controlsToAdd.Add(pb);
+                pageFiles.Add(file);
                 _thumbnails.Add(pb);
 
-                var thumb = GetThumbnailInternal(file, _thumbnailSize);
-                if (thumb != null)
-                {
-                    try
-                    {
-                        pb.Image = thumb;
-                        pb.BackColor = Color.Transparent;
-                    }
-                    catch { }
-                }
                 if (_selectedFiles.Contains(file))
                 {
                     SetPicturebox(file, pb, true);
@@ -548,6 +543,47 @@ namespace PictureManager
             _panel.SuspendLayout();
             _panel.Controls.AddRange(controlsToAdd.ToArray());
             _panel.ResumeLayout();
+
+            // === 后台加载缩略图（限并发 4，翻页后旧任务自动作废） ===
+            int thumbSize = _thumbnailSize;
+            for (int i = 0; i < controlsToAdd.Count; i++)
+            {
+                var pbLocal = (PictureBox)controlsToAdd[i];
+                string fileLocal = pageFiles[i];
+
+                Task.Run(async () =>
+                {
+                    await _thumbSemaphore.WaitAsync().ConfigureAwait(false);
+                    try
+                    {
+                        if (gen != _pageGeneration) return;
+
+                        Image thumb = GetThumbnailInternal(fileLocal, thumbSize);
+                        if (thumb == null) return;
+
+                        if (gen != _pageGeneration) { thumb.Dispose(); return; }
+
+                        try
+                        {
+                            BeginInvoke(new Action(() =>
+                            {
+                                if (gen != _pageGeneration || pbLocal.IsDisposed)
+                                {
+                                    thumb.Dispose();
+                                    return;
+                                }
+                                pbLocal.Image = thumb;
+                                SetPicturebox(fileLocal, pbLocal, _selectedFiles.Contains(fileLocal));
+                            }));
+                        }
+                        catch { thumb.Dispose(); }
+                    }
+                    finally
+                    {
+                        _thumbSemaphore.Release();
+                    }
+                });
+            }
 
             int totalHeight = 0;
             foreach (var pb in _thumbnails)
@@ -835,28 +871,40 @@ namespace PictureManager
             int bucket = Math.Max(50, Math.Min(400, ((size + 49) / 50) * 50));
             string cacheKey = file + "|" + bucket;
 
-            if (_thumbnailCacheFile.TryGetValue(cacheKey, out Image thumbnail))
+            lock (_thumbnailCacheFile)
             {
-                try { return new Bitmap(thumbnail); }
-                catch { _thumbnailCacheFile.Remove(cacheKey); thumbnail = null; }
+                if (_thumbnailCacheFile.TryGetValue(cacheKey, out Image cached))
+                {
+                    try { return new Bitmap(cached); }
+                    catch { _thumbnailCacheFile.Remove(cacheKey); }
+                }
             }
 
-            thumbnail = FileUtility.ReadPictureToImage(file, bucket);
-
+            Image thumbnail = FileUtility.ReadPictureToImage(file, bucket);
             if (thumbnail == null) return null;
 
-            _thumbnailCacheFile[cacheKey] = thumbnail;
-            _thumbnailCacheFileOrder.Remove(cacheKey);
-            _thumbnailCacheFileOrder.Add(cacheKey);
-            if (_thumbnailCacheFileOrder.Count > _maxCachedFiles)
+            lock (_thumbnailCacheFile)
             {
-                string oldest = _thumbnailCacheFileOrder[0];
-                _thumbnailCacheFileOrder.RemoveAt(0);
-                _thumbnailCacheFile[oldest]?.Dispose();
-                _thumbnailCacheFile.Remove(oldest);
+                if (_thumbnailCacheFile.TryGetValue(cacheKey, out Image raced))
+                {
+                    // 另一个线程刚好做完了，丢弃本次结果
+                    thumbnail.Dispose();
+                    try { return new Bitmap(raced); }
+                    catch { return null; }
+                }
+
+                _thumbnailCacheFile[cacheKey] = thumbnail;
+                _thumbnailCacheFileOrder.Remove(cacheKey);
+                _thumbnailCacheFileOrder.Add(cacheKey);
+                if (_thumbnailCacheFileOrder.Count > _maxCachedFiles)
+                {
+                    string oldest = _thumbnailCacheFileOrder[0];
+                    _thumbnailCacheFileOrder.RemoveAt(0);
+                    _thumbnailCacheFile[oldest]?.Dispose();
+                    _thumbnailCacheFile.Remove(oldest);
+                }
             }
 
-            // 交给调用方一份副本；缓存保留原件
             return new Bitmap(thumbnail);
         }
 
