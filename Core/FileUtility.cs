@@ -39,28 +39,58 @@ namespace PictureManager
 
             try
             {
-                using (var src = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
+                // 全尺寸路径（ReadPictureToBitmap 用）：保持原样
+                if (size <= 0)
                 {
-                    if (src.Empty()) return null;
-
-                    // 缩略图：直接 Mat → Bitmap，省掉 JPEG 编码+解码一个来回
-                    if (size > 0)
+                    using (var src = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
                     {
-                        using (var resized = new Mat())
+                        if (src == null || src.Empty()) return null;
+
+                        byte[] data = src.ImEncode(".jpg");
+                        using (var ms = new MemoryStream(data))
                         {
-                            int w, h;
-                            if (src.Width > src.Height) { w = size; h = (int)(src.Height * (size / (double)src.Width)); }
-                            else { h = size; w = (int)(src.Width * (size / (double)src.Height)); }
-                            Cv2.Resize(src, resized, new OpenCvSharp.Size(w, h));
-                            return OpenCvSharp.Extensions.BitmapConverter.ToBitmap(resized);
+                            try { return new Bitmap(ms); }
+                            catch { return null; }
                         }
                     }
+                }
 
-                    byte[] data = src.ImEncode(".jpg");
-                    using (var ms = new MemoryStream(data))
+                // 缩略图：先按 1/2 降分辨率解码，太小再全量解一次
+                byte[] bytes = File.ReadAllBytes(file);
+                Image bmp = DecodeThumbnail(bytes, size, true);
+                if (bmp != null) return bmp;
+                return DecodeThumbnail(bytes, size, false);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 缩略图解码。reduced=true 用 1/2 分辨率解码（JPEG 解码量降到 1/4）；
+        /// 结果比目标还小时返回 null，由调用方改用全量解码。
+        /// </summary>
+        private static Image DecodeThumbnail(byte[] bytes, int size, bool reduced)
+        {
+            try
+            {
+                var mode = reduced ? ImreadModes.ReducedColor2 : ImreadModes.Color;
+
+                using (var src = Cv2.ImDecode(bytes, mode))
+                {
+                    if (src == null || src.Empty()) return null;
+
+                    if (reduced && Math.Max(src.Width, src.Height) < size)
+                        return null;
+
+                    using (var resized = new Mat())
                     {
-                        try { return new Bitmap(ms); }
-                        catch { return null; }
+                        int w, h;
+                        if (src.Width > src.Height) { w = size; h = (int)(src.Height * (size / (double)src.Width)); }
+                        else { h = size; w = (int)(src.Width * (size / (double)src.Height)); }
+                        Cv2.Resize(src, resized, new OpenCvSharp.Size(w, h));
+                        return OpenCvSharp.Extensions.BitmapConverter.ToBitmap(resized);
                     }
                 }
             }
