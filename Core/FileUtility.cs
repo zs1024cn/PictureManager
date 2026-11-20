@@ -174,30 +174,38 @@ namespace PictureManager
 
         // ========== 文件类型判断 ==========
 
+        private static readonly HashSet<string> _imageExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".gif", ".webp",
+            ".bmp", ".dib", ".rle", ".tif", ".tiff", ".ico", ".wdp", ".jxr"
+        };
+
+        private static readonly HashSet<string> _videoExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".mp4", ".mpg", ".avi", ".m4v", ".m4a", ".mov", ".mkv", ".wmv", ".ts", ".m2ts",
+            ".webm", ".3gp", ".flv", ".vob", ".ogv", ".mp3", ".wav", ".flac", ".ogg",
+            ".wma", ".aac", ".opus"
+        };
+
+        private static readonly HashSet<string> _textExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ".txt", ".html", ".htm"
+        };
+
         public static bool IsImageFile(string ext)
         {
-            ext = ext.ToLower();
-            return ext == ".jpg" || ext == ".jpeg" || ext == ".jpe" || ext == ".jfif" || ext == ".png" ||
-                   ext == ".gif" || ext == ".webp" || ext == ".bmp" || ext == ".dib" || ext == ".rle" ||
-                   ext == ".tif" || ext == ".tiff" || ext == ".ico" || ext == ".wdp" || ext == ".jxr" ;
+            return !string.IsNullOrEmpty(ext) && _imageExts.Contains(ext);
         }
 
         public static bool IsVideoFile(string ext)
         {
-            ext = ext.ToLower();
-            return ext == ".mp4" || ext == ".mpg" || ext == ".avi" || ext == ".m4v" || ext == ".m4a" ||
-            ext == ".mov" || ext == ".mkv" || ext == ".wmv" || ext == ".ts" || ext == ".m2ts" ||
-            ext == ".webm" || ext == ".3gp" || ext == ".flv" || ext == ".vob" || ext == ".ogv" ||
-            ext == ".mp3" || ext == ".wav" || ext == ".flac" || ext == ".ogg" || ext == ".m4a" ||
-            ext == ".wma" || ext == ".aac" || ext == ".opus" ;
+            return !string.IsNullOrEmpty(ext) && _videoExts.Contains(ext);
         }
 
         public static bool IsTextFile(string ext)
         {
-            ext = ext.ToLower();
-            return ext == ".txt" || ext == ".html" || ext == ".htm";
+            return !string.IsNullOrEmpty(ext) && _textExts.Contains(ext);
         }
-
         // ========== 格式化 ==========
 
         public static string FormatFileSize(long bytes)

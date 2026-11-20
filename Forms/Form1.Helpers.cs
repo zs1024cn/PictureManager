@@ -77,34 +77,63 @@ namespace PictureManager
                 this.dg1.Columns["ID"].Width = 40;
 
             int existingRowCount = this.dg1.Rows.Count;
-            // 从 existingRowCount 开始添加，而不是从 0 开始
-            for (int i = existingRowCount; i < alFile.Count; i++)
+            if (existingRowCount >= alFile.Count) return;
+
+            // 四种行样式只创建一次，全表复用（原来每行 new 两个 Style）
+            var styleVideo = new DataGridViewCellStyle { BackColor = Color.FromArgb(0x22, 0x22, 0x44), ForeColor = Color.FromArgb(0xff, 0xff, 0xff) };
+            var styleImage = new DataGridViewCellStyle { BackColor = Color.FromArgb(0x22, 0x44, 0x22), ForeColor = Color.FromArgb(0xff, 0xff, 0xff) };
+            var styleText = new DataGridViewCellStyle { BackColor = Color.FromArgb(0x44, 0x22, 0x22), ForeColor = Color.FromArgb(0xff, 0xff, 0xff) };
+            var styleOther = new DataGridViewCellStyle { BackColor = Color.FromArgb(0x99, 0x99, 0x99), ForeColor = Color.FromArgb(0xff, 0xff, 0xff) };
+
+            const int batchSize = 8000;
+            var pending = new List<DataGridViewRow>(batchSize);
+            
+            this.dg1.CurrentCell = null;
+            this.dg1.SuspendLayout();
+            try
             {
-                FileInfo fi = (FileInfo)alFile[i];
-                object[] o = new object[7];  // 现在是 7 列
-                o[0] = 0;  // heart 初始为 0
-                o[1] = 0;  // break 初始为 0
-                o[2] = this.dg1.Rows.Count;
-                o[3] = fi.FullName;
-                o[4] = fi.Length;
-                o[5] = fi.LastWriteTime;
-                o[6] = null;  // Meta
-                int rowIndex = this.dg1.Rows.Add(o);
+                for (int i = existingRowCount; i < alFile.Count; i++)
+                {
+                    FileInfo fi = (FileInfo)alFile[i];
+                    object[] o = new object[7];
+                    o[0] = 0;
+                    o[1] = 0;
+                    o[2] = i;                 // ★ 批次未提交时 Rows.Count 不准，直接用序号
+                    o[3] = fi.FullName;
+                    o[4] = fi.Length;
+                    o[5] = fi.LastWriteTime;
+                    o[6] = null;
 
-                // 根据文件类型设置背景色
-                string ext = fi.Extension;
-                if (FileUtility.IsVideoFile(ext))
-                    this.dg1.Rows[rowIndex].DefaultCellStyle.BackColor = Color.FromArgb(0x22, 0x22, 0x44);
-                else if (FileUtility.IsImageFile(ext))
-                    this.dg1.Rows[rowIndex].DefaultCellStyle.BackColor = Color.FromArgb(0x22, 0x44, 0x22);
-                else if (FileUtility.IsTextFile(ext))
-                    this.dg1.Rows[rowIndex].DefaultCellStyle.BackColor = Color.FromArgb(0x44, 0x22, 0x22);
-                else
-                    this.dg1.Rows[rowIndex].DefaultCellStyle.BackColor = Color.FromArgb(0x99, 0x99, 0x99);
-                this.dg1.Rows[rowIndex].DefaultCellStyle.ForeColor = Color.FromArgb(0xff, 0xff, 0xff);
+                    var row = new DataGridViewRow();
+                    row.CreateCells(this.dg1, o);
 
-                if (i % 1000 == 0)
-                    System.Windows.Forms.Application.DoEvents();
+                    string ext = fi.Extension;
+                    if (FileUtility.IsVideoFile(ext))
+                        row.DefaultCellStyle = styleVideo;
+                    else if (FileUtility.IsImageFile(ext))
+                        row.DefaultCellStyle = styleImage;
+                    else if (FileUtility.IsTextFile(ext))
+                        row.DefaultCellStyle = styleText;
+                    else
+                        row.DefaultCellStyle = styleOther;
+
+                    pending.Add(row);
+                    if (pending.Count >= batchSize)
+                    {
+                        this.dg1.Rows.AddRange(pending.ToArray());
+                        pending.Clear();
+                    }
+                }
+
+                if (pending.Count > 0)
+                {
+                    this.dg1.Rows.AddRange(pending.ToArray());
+                    pending.Clear();
+                }
+            }
+            finally
+            {
+                this.dg1.ResumeLayout();
             }
         }
         private void AddFileToView(string sDirName)
@@ -185,10 +214,9 @@ namespace PictureManager
                 }
             }
 
-            // 删除空目录
-            var fiRoot = diRoot.GetFiles("*.*");
+            // 删除空目录（只在没有子目录时才去查文件，且查到第一个就停）
             List<string> checkedDirs = directoryListControl1.CheckedDirectories.ToList();
-            if (fiRoot.Length == 0 && di.Length == 0)
+            if (di.Length == 0 && !diRoot.EnumerateFiles().Any())
             {
                 // 不删除根目录
                 if (!checkedDirs.Any(d => string.Equals(d, sDirName, StringComparison.OrdinalIgnoreCase)))
@@ -556,14 +584,27 @@ namespace PictureManager
             iEmptyDirectoryCount = 0;
             sEmptyDirectory = "";
             ialFilesAllCount = 0;
+            
+            var swPhase = System.Diagnostics.Stopwatch.StartNew();
             var checkedDirs = directoryListControl1.CheckedDirectories;
             foreach (string dir in checkedDirs)
             {
                 AddFileToView(dir);
             }
+            log($"① 扫描目录 {alFile.Count} 个文件用了 {swPhase.ElapsedMilliseconds}ms");
+            swPhase.Restart();
+
+            var swLoad = System.Diagnostics.Stopwatch.StartNew();
+            // 先按日期倒序排好再插入，省掉对 11.5 万行做 DataGridView 排序
+            var sortedFiles = alFile.Cast<FileInfo>().OrderByDescending(f => f.LastWriteTime).ToList();
+            alFile.Clear();
+            foreach (var f in sortedFiles) alFile.Add(f);
+            log($"② 排序 {alFile.Count} 个文件用了 {swPhase.ElapsedMilliseconds}ms");
+            swPhase.Restart();
 
             AddFileToDataGrid();
-            this.dg1.Sort(this.dg1.Columns["Date"], ListSortDirection.Descending);
+            log($"③ 填充表格用了 {swPhase.ElapsedMilliseconds}ms");
+            swPhase.Restart();
             this.dg1.Visible = true;
             if (this.dg1.Rows.Count > 0)
             {
@@ -601,6 +642,7 @@ namespace PictureManager
                     DatagridSeekFile(lastFile);
                 }));
             }
+            log($"loadview finished 用了 {swPhase.ElapsedMilliseconds}ms");
         }
         private void btnClearGarbage_Click(object sender, EventArgs e)
         {
