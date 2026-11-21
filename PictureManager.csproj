@@ -201,6 +201,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Core\AppLog.cs" />
     <Compile Include="Core\Duplicate.Bucket.cs" />
     <Compile Include="Core\Duplicate.Cache.cs" />
     <Compile Include="Core\Duplicate.Extract.cs" />

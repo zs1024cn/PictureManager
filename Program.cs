@@ -16,6 +16,8 @@ namespace PictureManager
         [STAThread]
         static void Main()
         {
+            AppLog.Init();   // 日志文件：logs\yyyy-MM-dd.log
+
             // 全局异常捕获：任何未处理异常都写日志 + 弹窗，避免程序无声退出
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
 
@@ -76,9 +78,7 @@ namespace PictureManager
         {
             try
             {
-                string logPath = Path.Combine(Application.StartupPath, "crash.log");
-                string text = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {tag}\r\n{ex}\r\n\r\n";
-                File.AppendAllText(logPath, text);
+                AppLog.Write("crash", tag + "\r\n" + ex);
             }
             catch { }
         }

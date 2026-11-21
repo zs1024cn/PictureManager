@@ -47,19 +47,10 @@ namespace PictureManager
             if (this.sCurrentFileName == sFileName) return;
 
             this.sCurrentFileName = sFileName;
-            if (sFileName.Length < 80)
-                this.toolStripStatusLabelFileName.Text = sFileName;
-            else
-                this.toolStripStatusLabelFileName.Text = sFileName.Substring(0, 40) + "..." + sFileName.Substring(sFileName.Length - 37);
-            if (this.toolStripStatusLabelFileName.Text.Length < 100)
-                this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
-            else
-                this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.toolStripStatusLabelPictureMode.Font = new System.Drawing.Font("Microsoft YaHei UI", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.toolStripStatusLabelSize.BackColor = this.toolStripStatusLabelPictureMode.BackColor;
             this.toolStripStatusLabelFileName.BackColor = this.toolStripStatusLabelPictureMode.BackColor;
             this.labelDBRecords.Text = $"DB:{_myDb._DeletedRegistryCount}/{_myDb._RegistryCount}+{_deletedMetaList.Count}";
-
 
             if (!File.Exists(sFileName))
             {
@@ -108,6 +99,15 @@ namespace PictureManager
                 bool isImage = FileUtility.IsImageFile(sFileExt);
                 // 判断是否是小说格式
                 bool isText = FileUtility.IsTextFile(sFileExt);
+
+                if (sFileName.Length < 80)
+                    this.toolStripStatusLabelFileName.Text = sFileName;
+                else
+                    this.toolStripStatusLabelFileName.Text = sFileName.Substring(0, 40) + "..." + sFileName.Substring(sFileName.Length - 37);
+                if (this.toolStripStatusLabelFileName.Text.Length < (isVideo? 70:100))
+                    this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 15.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+                else
+                    this.toolStripStatusLabelFileName.Font = new System.Drawing.Font("Microsoft YaHei UI", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
 
                 if (isVideo)
                 {

@@ -477,6 +477,9 @@ namespace PictureManager
         // 去雾：第一次点先把原图备份，之后每次都从备份重算，参数改了可以反复试
         private void ApplyDehazeWithBackup()
         {
+            if (_dehazePanel != null && !_dehazePanel.IsDisposed)
+                _dehazePanel.Visible = false;
+
             try
             {
                 // ★ 诊断：点击时把当前参数写进标题栏

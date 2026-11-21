@@ -532,8 +532,8 @@ namespace PictureManager
 
         private void log(string s)
         {
-            //btnForumDownloader.Text = s;  // 恢复文字
             Console.WriteLine(s);
+            AppLog.Write("ui", s);
         }
         private void btnLoadView_Click(object sender, EventArgs e)
         {
