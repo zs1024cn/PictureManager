@@ -28,7 +28,8 @@ namespace PictureManager
         private TextBox tbParam;
         private Label lblSize;
         private string _currentModel;
-
+        private Panel _dehazePanel;
+        private TextBox _dehazeInfo;
         public string AlbumReturnValue = "";
         public CompareForm(string leftFile, string rightFile)
         {
@@ -352,14 +353,21 @@ namespace PictureManager
                 Location = new System.Drawing.Point(10, exposureBar.Bottom + 20),
                 ForeColor = Color.White,
                 Font = headerFont,
-                Size = new System.Drawing.Size(180, 40)
+                Size = new System.Drawing.Size(80, 40)
             };
-            DehazeButton.Click += (s, e) =>
-            {
-                FileUtility.ApplyDehaze(_rightFilePath);
-                LoadRightImage();
-            };
+            DehazeButton.Click += (s, e) => ApplyDehazeWithBackup();
             leftPanel.Controls.Add(DehazeButton);
+
+            var DehazeParamButton = new Button
+            {
+                Text = "...",
+                Location = new System.Drawing.Point(mergeButton.Right - 60, exposureBar.Bottom + 20),
+                ForeColor = Color.White,
+                Font = headerFont,
+                Size = new System.Drawing.Size(60, 40)
+            };
+            DehazeParamButton.Click += (s, e) => ShowDehazePanel();
+            leftPanel.Controls.Add(DehazeParamButton);
 
             // 局部提亮按钮
             var LocalContrastButton = new Button
@@ -410,6 +418,13 @@ namespace PictureManager
             {
                 _leftImage?.Dispose();
                 _rightImage?.Dispose();
+
+                try
+                {
+                    string bak = _rightFilePath + ".dehaze.bak";
+                    if (File.Exists(bak)) File.Delete(bak);
+                }
+                catch { }
             };
 
             this.KeyDown += Form_KeyDown;
@@ -458,6 +473,293 @@ namespace PictureManager
         {
             FileUtility.MakeClear(_rightFilePath);
             LoadRightImage();
+        }
+        // 去雾：第一次点先把原图备份，之后每次都从备份重算，参数改了可以反复试
+        private void ApplyDehazeWithBackup()
+        {
+            try
+            {
+                // ★ 诊断：点击时把当前参数写进标题栏
+                this.Text = string.Format(
+                    "参数 omega={0:F2} tMin={1:F2} blend={2:F2} clahe={3:F2} sat={4:F2} warm={5} expo={6:F2} skin={7:F2}",
+                    FileUtility.DehazeOmega, FileUtility.DehazeTMin, FileUtility.DehazeBlend,
+                    FileUtility.DehazeClaheClip, FileUtility.DehazeSatBoost, FileUtility.DehazeWarm,
+                    FileUtility.DehazeExposure, FileUtility.DehazeSkinLift);
+
+                string bak = _rightFilePath + ".dehaze.bak";
+                if (!File.Exists(bak))
+                    File.Copy(_rightFilePath, bak, true);
+
+                File.Copy(bak, _rightFilePath, true);
+                FileUtility.ApplyDehaze(_rightFilePath);
+                LoadRightImage();
+
+                // ★ 诊断：出图后把文件大小附在标题上（能看出是否重新写过文件）
+                this.Text += "  |  " + new FileInfo(_rightFilePath).Length + " bytes";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("去雾失败: " + ex.Message);
+            }
+        }
+
+        private void ShowDehazePanel()
+        {
+            if (_dehazePanel == null || _dehazePanel.IsDisposed)
+                _dehazePanel = BuildDehazePanel();
+
+            _dehazePanel.Visible = true;
+            _dehazePanel.BringToFront();
+        }
+
+        private Panel BuildDehazePanel()
+        {
+            double ds = this.DeviceDpi / 96.0;   // 125% 缩放 → 1.25
+            if (ds < 1) ds = 1;
+            if (ds > 3) ds = 3;
+
+            var titleFont = new Font("宋体", 12F, FontStyle.Bold);
+            var textFont = new Font("宋体", 9F);
+
+            int lblH = (int)(24 * ds);
+            int tbH = (int)(48 * ds);
+            int gap = (int)(10 * ds);
+            int rowH = lblH + tbH + gap;
+
+            int headerH = (int)(48 * ds);
+            int footerH = (int)(86 * ds);
+            int hostW = (int)(420 * ds);
+            int hostH = headerH + 8 * rowH + footerH + 40;
+            var host = new Panel
+            {
+                Size = new System.Drawing.Size(hostW, hostH),
+                BackColor = Color.FromArgb(45, 45, 45),
+                BorderStyle = BorderStyle.FixedSingle,
+                AutoScroll = true
+            };
+
+            var title = new Label
+            {
+                Text = "去雾参数 (DPI " + this.DeviceDpi + ")",
+                ForeColor = Color.White,
+                Font = titleFont,
+                Location = new System.Drawing.Point((int)(12 * ds), (int)(10 * ds)),
+                AutoSize = true
+            };
+            host.Controls.Add(title);
+
+            var close = new Button
+            {
+                Text = "×",
+                Location = new System.Drawing.Point(hostW - (int)(44 * ds), (int)(6 * ds)),
+                Size = new System.Drawing.Size((int)(32 * ds), (int)(28 * ds)),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(70, 70, 70),
+                FlatStyle = FlatStyle.Flat,
+                Font = titleFont
+            };
+            close.Click += (s, e) =>
+            {
+                if (_dehazePanel != null && !_dehazePanel.IsDisposed)
+                    _dehazePanel.Visible = false;
+            };
+            host.Controls.Add(close);
+
+            int y = headerH;
+            AddDehazeSlider(host, "总强度DehazeStrength", 0.00, 1.00, 0.01, textFont, ds,
+    () => FileUtility.DehazeStrength, v => FileUtility.DehazeStrength = v, ref y);
+            AddDehazeSlider(host, "去雾强度DehazeOmega", 0.50, 0.95, 0.01, textFont, ds,
+                () => FileUtility.DehazeOmega, v => FileUtility.DehazeOmega = v, ref y);
+            AddDehazeSlider(host, "传输下限DehazeTMin", 0.30, 0.70, 0.01, textFont, ds,
+                () => FileUtility.DehazeTMin, v => FileUtility.DehazeTMin = v, ref y);
+            AddDehazeSlider(host, "与原图混合DehazeBlend", 0.20, 0.90, 0.01, textFont, ds,
+                () => FileUtility.DehazeBlend, v => FileUtility.DehazeBlend = v, ref y);
+            AddDehazeSlider(host, "曝光补偿DehazeExposure", 0.90, 1.20, 0.01, textFont, ds,
+                () => FileUtility.DehazeExposure, v => FileUtility.DehazeExposure = v, ref y);
+            AddDehazeSlider(host, "局部对比DehazeClaheClip", 1.00, 3.00, 0.05, textFont, ds,
+                () => FileUtility.DehazeClaheClip, v => FileUtility.DehazeClaheClip = v, ref y);
+            AddDehazeSlider(host, "饱和度DehazeSatBoost", 0.00, 0.30, 0.01, textFont, ds,
+                () => FileUtility.DehazeSatBoost, v => FileUtility.DehazeSatBoost = v, ref y);
+            AddDehazeSlider(host, "暖调DehazeWarm", -6, 6, 1, textFont, ds,
+                () => FileUtility.DehazeWarm, v => FileUtility.DehazeWarm = (int)Math.Round(v), ref y);
+            AddDehazeSlider(host, "肤色保护DehazeSkinLift", 0.50, 1.00, 0.01, textFont, ds,
+                () => FileUtility.DehazeSkinLift, v => FileUtility.DehazeSkinLift = v, ref y);
+
+            int btnW = (int)(120 * ds);
+            int btnH = (int)(34 * ds);
+
+            var restore = new Button
+            {
+                Text = "恢复原图",
+                Location = new System.Drawing.Point((int)(12 * ds), y + (int)(6 * ds)),
+                Size = new System.Drawing.Size(btnW, btnH),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(70, 70, 70),
+                FlatStyle = FlatStyle.Flat,
+                Font = textFont
+            };
+            restore.Click += (s, e) =>
+            {
+                try
+                {
+                    string bak = _rightFilePath + ".dehaze.bak";
+                    if (File.Exists(bak))
+                    {
+                        File.Copy(bak, _rightFilePath, true);
+                        LoadRightImage();
+                    }
+                }
+                catch (Exception ex) { MessageBox.Show("恢复失败: " + ex.Message); }
+            };
+            host.Controls.Add(restore);
+
+            var reset = new Button
+            {
+                Text = "重置参数",
+                Location = new System.Drawing.Point((int)(12 * ds) + btnW + (int)(10 * ds), y + (int)(6 * ds)),
+                Size = new System.Drawing.Size(btnW, btnH),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(70, 70, 70),
+                FlatStyle = FlatStyle.Flat,
+                Font = textFont
+            };
+            reset.Click += (s, e) =>
+            {
+                FileUtility.ResetDehazeDefaults();
+
+                _dehazePanel.Visible = false;
+                _dehazePanel.Dispose();
+                _dehazePanel = null;
+
+                if (_dehazeInfo != null && !_dehazeInfo.IsDisposed)
+                {
+                    _dehazeInfo.Visible = false;
+                    _dehazeInfo.Dispose();
+                }
+                _dehazeInfo = null;
+
+                ShowDehazePanel();
+            };
+            host.Controls.Add(reset);
+
+            // ===== 右侧：说明框 + 下方按钮 =====
+            int infoW = (int)(360 * ds);
+            int gapW = (int)(8 * ds);
+            int btnGapY = (int)(8 * ds);
+            btnH = restore.Height;
+            int infoH = hostH - btnH - btnGapY;
+
+            var info = new TextBox
+            {
+                Multiline = true,
+                ReadOnly = true,
+                WordWrap = true,
+                ScrollBars = ScrollBars.Vertical,
+                BackColor = Color.FromArgb(30, 30, 30),
+                ForeColor = Color.Gainsboro,
+                Font = new Font("宋体", 9F),
+                Size = new System.Drawing.Size(infoW, infoH),
+                Text =
+                    "想要的效果  →  改哪个参数" + Environment.NewLine + Environment.NewLine +
+                    "总强度DehazeStrength：0=原图，1=满效果" + Environment.NewLine + Environment.NewLine +
+                    "更通透（雾更少）" + Environment.NewLine +
+                    "   DehazeOmega 0.78 → 0.85" + Environment.NewLine +
+                    "   或 DehazeBlend 0.50 → 0.60" + Environment.NewLine + Environment.NewLine +
+                    "更自然（少动原图）" + Environment.NewLine +
+                    "   DehazeBlend → 0.40" + Environment.NewLine + Environment.NewLine +
+                    "暗部死黑" + Environment.NewLine +
+                    "   DehazeTMin 0.50 → 0.55" + Environment.NewLine + Environment.NewLine +
+                    "更鲜艳" + Environment.NewLine +
+                    "   DehazeSatBoost 0.08 → 0.12" + Environment.NewLine + Environment.NewLine +
+                    "更暖 / 更冷" + Environment.NewLine +
+                    "   DehazeWarm 0 → 2 / -2" + Environment.NewLine + Environment.NewLine +
+                    "脸还是偏色" + Environment.NewLine +
+                    "   DehazeSkinLift 0.85 → 0.95"
+            };
+            _dehazeInfo = info;
+
+            int totalW = hostW + gapW + infoW;
+            int left = Math.Max(0, (this.ClientSize.Width - totalW) / 2);
+            int top = Math.Max(0, (this.ClientSize.Height - hostH) / 2);
+
+            // 外层容器：统一承载参数面板、说明框、两个按钮，显隐只需管它
+            var outer = new Panel
+            {
+                Location = new System.Drawing.Point(left, top),
+                Size = new System.Drawing.Size(totalW, hostH),
+                BackColor = Color.Transparent
+            };
+
+            host.Location = new System.Drawing.Point(0, 0);
+            info.Location = new System.Drawing.Point(hostW + gapW, 0);
+
+            outer.Controls.Add(host);
+            outer.Controls.Add(info);
+            outer.Controls.Add(restore);   // 从 host 里搬出来
+            outer.Controls.Add(reset);     // 同上
+
+            restore.Location = new System.Drawing.Point(hostW + gapW, infoH + btnGapY);
+            reset.Location = new System.Drawing.Point(
+                hostW + gapW + restore.Width + (int)(8 * ds), infoH + btnGapY);
+
+            this.Controls.Add(outer);
+            outer.BringToFront();
+            return outer;
+        }
+
+        private void AddDehazeSlider(Panel host, string caption, double min, double max, double step,
+                             Font font, double ds, Func<double> getter, Action<double> setter, ref int y)
+        {
+            int lblH = (int)(24 * ds);
+            int tbH = (int)(48 * ds);
+            int gap = (int)(16 * ds);
+            int rowH = lblH + tbH + gap;
+
+            var lbl = new Label
+            {
+                Text = caption,
+                ForeColor = Color.White,
+                Font = font,
+                Location = new System.Drawing.Point((int)(12 * ds), y),
+                AutoSize = true
+            };
+            host.Controls.Add(lbl);
+
+            var val = new Label
+            {
+                Text = getter().ToString("F2"),
+                ForeColor = Color.LightGreen,
+                Font = font,
+                Location = new System.Drawing.Point((int)(310 * ds), y),
+                AutoSize = true
+            };
+            host.Controls.Add(val);
+
+            int steps = (int)Math.Round((max - min) / step);
+            if (steps < 1) steps = 1;
+
+            var tb = new TrackBar
+            {
+                Minimum = 0,
+                Maximum = steps,
+                Value = Math.Max(0, Math.Min(steps, (int)Math.Round((getter() - min) / step))),
+                Location = new System.Drawing.Point((int)(8 * ds), y + lblH),
+                Size = new System.Drawing.Size((int)(384 * ds), tbH),
+                AutoSize = false,          // ★ 关键：不许它自己改高度
+                TickStyle = TickStyle.None,
+                SmallChange = 1,
+                LargeChange = Math.Max(1, steps / 20)
+            };
+            tb.Height = tbH;               // ★ 显式再设一次，保险
+            tb.Scroll += (s, e) =>
+            {
+                double v = min + tb.Value * step;
+                setter(v);
+                val.Text = v.ToString("F2");
+            };
+            host.Controls.Add(tb);
+
+            y += rowH;                     // ★ 行距 = 标签 + 滑块 + 间距
         }
         private void ApplyVividButton_Click(object sender, EventArgs e)
         {

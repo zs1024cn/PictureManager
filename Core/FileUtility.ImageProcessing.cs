@@ -750,16 +750,7 @@ namespace PictureManager
         /// </summary>
         public static void ApplyDehaze(string file)
         {
-            using (var img = Cv2.ImDecode(File.ReadAllBytes(file), ImreadModes.Color))
-            {
-                if (img.Empty()) return;
-
-                using (var result = Dehaze(img))
-                {
-                    byte[] jpegBytes = result.ImEncode(".jpg");
-                    File.WriteAllBytes(file, jpegBytes);
-                }
-            }
+            ApplyDehazePro(file, FileUtility.DehazeStrength);
         }
         /// <summary>
         /// 局部对比度增强（CLAHE）。读文件 → 处理 → 写回。

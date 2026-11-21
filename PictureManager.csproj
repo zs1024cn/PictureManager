@@ -205,6 +205,7 @@
     <Compile Include="Core\Duplicate.Cache.cs" />
     <Compile Include="Core\Duplicate.Extract.cs" />
     <Compile Include="Core\Duplicate.Match.cs" />
+    <Compile Include="Core\FileUtility.Dehaze.cs" />
     <Compile Include="Core\FileUtility.FileDeletion.cs" />
     <Compile Include="Core\FileUtility.ImageHtml.cs" />
     <Compile Include="Core\FileUtility.ImageMask.cs" />
