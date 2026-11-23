@@ -29,6 +29,7 @@ namespace PictureManager
         private Label lblSize;
         private string _currentModel;
         private Panel _dehazePanel;
+        private Panel _skinPanel;
         private TextBox _dehazeInfo;
         public string AlbumReturnValue = "";
         public CompareForm(string leftFile, string rightFile)
@@ -369,22 +370,36 @@ namespace PictureManager
             DehazeParamButton.Click += (s, e) => ShowDehazePanel();
             leftPanel.Controls.Add(DehazeParamButton);
 
-            // 局部提亮按钮
+            // 肤色嫩白按钮
             var LocalContrastButton = new Button
             {
-                Text = "局部提亮",
+                Text = "嫩白",
                 Location = new System.Drawing.Point(10, DehazeButton.Bottom + 20),
                 ForeColor = Color.White,
                 Font = headerFont,
-                Size = new System.Drawing.Size(180, 40)
+                Size = new System.Drawing.Size(80, 40)
             };
             LocalContrastButton.Click += (s, e) =>
             {
-                FileUtility.ApplyLocalContrast(_rightFilePath);
+                if (_skinPanel != null)
+                    _skinPanel.Visible = false;
+
+                FileUtility.ApplySkinWhiten(_rightFilePath, FileUtility.SkinStrength);
                 LoadRightImage();
             };
             leftPanel.Controls.Add(LocalContrastButton);
-            
+
+            var SkinParamButton = new Button
+            {
+                Text = "...",
+                Location = new System.Drawing.Point(mergeButton.Right - 60, DehazeButton.Bottom + 20),
+                ForeColor = Color.White,
+                Font = headerFont,
+                Size = new System.Drawing.Size(60, 40)
+            };
+            SkinParamButton.Click += (s, e) => ShowSkinPanel();
+            leftPanel.Controls.Add(SkinParamButton);
+
             var RefreshButton = new Button
             {
                 Text = "刷新",
@@ -709,7 +724,108 @@ namespace PictureManager
             outer.BringToFront();
             return outer;
         }
+        private void ShowSkinPanel()
+        {
+            if (_skinPanel == null || _skinPanel.IsDisposed)
+                _skinPanel = BuildSkinPanel();
 
+            _skinPanel.Visible = true;
+            _skinPanel.BringToFront();
+        }
+
+        private Panel BuildSkinPanel()
+        {
+            double ds = this.DeviceDpi / 96.0;
+            if (ds < 1) ds = 1;
+            if (ds > 3) ds = 3;
+
+            var titleFont = new Font("宋体", 12F, FontStyle.Bold);
+            var textFont = new Font("宋体", 9F);
+
+            int lblH = (int)(24 * ds);
+            int tbH = (int)(48 * ds);
+            int gap = (int)(16 * ds);
+            int rowH = lblH + tbH + gap;
+
+            int headerH = (int)(48 * ds);
+            int footerH = (int)(70 * ds);
+            int hostW = (int)(420 * ds);
+            int hostH = headerH + 6 * rowH + footerH;
+
+            var host = new Panel
+            {
+                Size = new System.Drawing.Size(hostW, hostH),
+                BackColor = Color.FromArgb(45, 45, 45),
+                BorderStyle = BorderStyle.FixedSingle
+            };
+            host.Location = new System.Drawing.Point(
+                Math.Max(0, (this.ClientSize.Width - hostW) / 2),
+                Math.Max(0, (this.ClientSize.Height - hostH) / 2));
+
+            var title = new Label
+            {
+                Text = "嫩白参数 (DPI " + this.DeviceDpi + ")",
+                ForeColor = Color.White,
+                Font = titleFont,
+                Location = new System.Drawing.Point((int)(12 * ds), (int)(10 * ds)),
+                AutoSize = true
+            };
+            host.Controls.Add(title);
+
+            var close = new Button
+            {
+                Text = "×",
+                Location = new System.Drawing.Point(hostW - (int)(44 * ds), (int)(6 * ds)),
+                Size = new System.Drawing.Size((int)(32 * ds), (int)(28 * ds)),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(70, 70, 70),
+                FlatStyle = FlatStyle.Flat,
+                Font = titleFont
+            };
+            close.Click += (s, e) => { if (_skinPanel != null && !_skinPanel.IsDisposed) _skinPanel.Visible = false; };
+            host.Controls.Add(close);
+
+            int y = headerH;
+
+            AddDehazeSlider(host, "提亮强度SkinLGamma", 0.30, 0.95, 0.01, textFont, ds,
+    () => FileUtility.SkinLGamma, v => FileUtility.SkinLGamma = v, ref y);
+            AddDehazeSlider(host, "去黄SkinBAlpha", 0.40, 0.95, 0.01, textFont, ds,
+                () => FileUtility.SkinBAlpha, v => FileUtility.SkinBAlpha = v, ref y);
+            AddDehazeSlider(host, "加红SkinABeta", -5, 15, 0.5, textFont, ds,
+    () => FileUtility.SkinABeta, v => FileUtility.SkinABeta = v, ref y);
+            AddDehazeSlider(host, "加黄SkinBShift", -10, 10, 0.5, textFont, ds,
+                () => FileUtility.SkinBShift, v => FileUtility.SkinBShift = v, ref y);
+            AddDehazeSlider(host, "偏色SkinAAlpha", 0.70, 1.00, 0.01, textFont, ds,
+                () => FileUtility.SkinAAlpha, v => FileUtility.SkinAAlpha = v, ref y);
+            AddDehazeSlider(host, "整体强度", 0.20, 1.50, 0.01, textFont, ds,
+                () => FileUtility.SkinStrength, v => FileUtility.SkinStrength = v, ref y);
+
+            var reset = new Button
+            {
+                Text = "重置参数",
+                Location = new System.Drawing.Point((int)(12 * ds), y + (int)(6 * ds)),
+                Size = new System.Drawing.Size((int)(120 * ds), (int)(34 * ds)),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(70, 70, 70),
+                FlatStyle = FlatStyle.Flat,
+                Font = textFont
+            };
+            reset.Click += (s, e) =>
+            {
+                FileUtility.ResetSkinDefaults();
+
+                _skinPanel.Visible = false;
+                _skinPanel.Dispose();
+                _skinPanel = null;
+
+                ShowSkinPanel();
+            };
+            host.Controls.Add(reset);
+
+            this.Controls.Add(host);
+            host.BringToFront();
+            return host;
+        }
         private void AddDehazeSlider(Panel host, string caption, double min, double max, double step,
                              Font font, double ds, Func<double> getter, Action<double> setter, ref int y)
         {

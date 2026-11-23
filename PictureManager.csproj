@@ -213,6 +213,7 @@
     <Compile Include="Core\FileUtility.ImageProcessing.cs" />
     <Compile Include="Core\FileUtility.ImageResize.cs" />
     <Compile Include="Core\FileFingerprint.cs" />
+    <Compile Include="Core\FileUtility.SkinWhiten.cs" />
     <Compile Include="Core\GlassMosaicParams.cs" />
     <Compile Include="Forms\AlbumForm.cs">
       <SubType>Form</SubType>
