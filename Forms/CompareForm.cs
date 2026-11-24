@@ -384,8 +384,7 @@ namespace PictureManager
                 if (_skinPanel != null)
                     _skinPanel.Visible = false;
 
-                FileUtility.ApplySkinWhiten(_rightFilePath, FileUtility.SkinStrength);
-                LoadRightImage();
+                ApplySkinWhitenWithBackup();
             };
             leftPanel.Controls.Add(LocalContrastButton);
 
@@ -438,6 +437,9 @@ namespace PictureManager
                 {
                     string bak = _rightFilePath + ".dehaze.bak";
                     if (File.Exists(bak)) File.Delete(bak);
+
+                    string wbak = _rightFilePath + ".whiten.bak";
+                    if (File.Exists(wbak)) File.Delete(wbak);
                 }
                 catch { }
             };
@@ -488,6 +490,25 @@ namespace PictureManager
         {
             FileUtility.MakeClear(_rightFilePath);
             LoadRightImage();
+        }
+        // 嫩白：第一次点先把当前右图备份，之后每次都从备份重算，连点不叠加
+        private void ApplySkinWhitenWithBackup()
+        {
+            try
+            {
+                string bak = _rightFilePath + ".whiten.bak";
+
+                if (!File.Exists(bak))
+                    File.Copy(_rightFilePath, bak, true);   // 记录"第一次嫩白前"的状态
+
+                File.Copy(bak, _rightFilePath, true);       // 回到基准
+                FileUtility.ApplySkinWhiten(_rightFilePath, FileUtility.SkinStrength);
+                LoadRightImage();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("嫩白失败: " + ex.Message);
+            }
         }
         // 去雾：第一次点先把原图备份，之后每次都从备份重算，参数改了可以反复试
         private void ApplyDehazeWithBackup()

@@ -529,7 +529,82 @@ namespace PictureManager
                 }
             }
         }
+        // ===== dg1 右键菜单 =====
+        private void InitDg1Menu()
+        {
+            menuDg1 = new ContextMenuStrip();
 
+            var copy = new ToolStripMenuItem("复制文件路径全名");
+            copy.Click += (s, e) =>
+            {
+                string fp = menuDg1.Tag as string;
+                if (string.IsNullOrEmpty(fp)) return;
+                try
+                {
+                    Clipboard.SetText(fp);
+                    this.toolStripStatusLabelStatus.Text = "已复制: " + fp;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("复制失败: " + ex.Message);
+                }
+            };
+            menuDg1.Items.Add(copy);
+
+            menuDg1.Items.Add(new ToolStripSeparator());
+
+            AddDg1Item("删除 (D)", Keys.D);
+            AddDg1Item("只删本目录文件 (F2)", Keys.F2);
+            AddDg1Item("作垃圾删本目录 (F3)", Keys.F3);
+            AddDg1Item("打开目录相册 (F4)", Keys.F4);
+            AddDg1Item("切换显示模式 S/M/H (F9)", Keys.F9);
+            AddDg1Item("重建图片 (Ctrl+S)", Keys.Control | Keys.S);
+            AddDg1Item("顺时针旋转 (Ctrl+R)", Keys.Control | Keys.R);
+            AddDg1Item("AI 增强 (T)", Keys.T);
+            AddDg1Item("用外部程序打开 (E)", Keys.E);
+            AddDg1Item("脸部马赛克 (Ctrl+E)", Keys.Control | Keys.E);
+            AddDg1Item("相似图 Hash/DCT/Sift (V)", Keys.V);
+            AddDg1Item("相似图 HSV (F)", Keys.F);
+            AddDg1Item("DCT 直方图 (Space)", Keys.Space);
+
+            menuDg1.Items.Add(new ToolStripSeparator());
+
+            AddDg1Item("点赞 (Z)", Keys.Z);
+            AddDg1Item("点踩 (X)", Keys.X);
+            AddDg1Item("移动到目录 (Ctrl+X)", Keys.Control | Keys.X);
+
+            dg1.CellMouseDown += Dg1_CellMouseDown;
+        }
+
+        private void AddDg1Item(string text, Keys keyData)
+        {
+            var item = new ToolStripMenuItem(text);
+            item.Click += (s, e) => InvokeDg1Key(keyData);
+            menuDg1.Items.Add(item);
+        }
+
+        private void Dg1_CellMouseDown(object sender, DataGridViewCellMouseEventArgs e)
+        {
+            if (e.Button != MouseButtons.Right || e.RowIndex < 0) return;
+
+            int col = e.ColumnIndex >= 0 ? e.ColumnIndex : 0;
+            dg1.CurrentCell = dg1.Rows[e.RowIndex].Cells[col];
+
+            string fp = dg1.Rows[e.RowIndex].Cells["Name"].Value?.ToString();
+            if (string.IsNullOrEmpty(fp)) return;
+
+            menuDg1.Tag = fp;
+            menuDg1.Show(Cursor.Position);
+        }
+
+        private void InvokeDg1Key(Keys keyData)
+        {
+            string fp = menuDg1.Tag as string;
+            if (!string.IsNullOrEmpty(fp))
+                sCurrentFileName = fp;          // 让 T/E/Ctrl+E 这类用 sCurrentFileName 的分支指向被右击的行
+
+            dg1_KeyDown(this.dg1, new KeyEventArgs(keyData));
+        }
         private void log(string s)
         {
             Console.WriteLine(s);

@@ -360,6 +360,34 @@ namespace PictureManager
                     catch { }
                 }
 
+                // ===== 追加：同名文件（扩展名相同，文件名互相包含）=====
+                string curExt = Path.GetExtension(sCurrentFileName);
+                string curBase = Path.GetFileNameWithoutExtension(sCurrentFileName);
+                int nameHits = 0;
+
+                if (!string.IsNullOrEmpty(curBase))
+                {
+                    foreach (FileInfo fi in alFile)
+                    {
+                        if (fi.FullName == sCurrentFileName) continue;
+
+                        if (!string.Equals(fi.Extension, curExt, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        string b = Path.GetFileNameWithoutExtension(fi.Name);
+                        if (string.IsNullOrEmpty(b)) continue;
+
+                        if (b.IndexOf(curBase, StringComparison.OrdinalIgnoreCase) >= 0 ||
+                            curBase.IndexOf(b, StringComparison.OrdinalIgnoreCase) >= 0)
+                        {
+                            similarFiles.Add(fi.FullName);
+                            nameHits++;
+                        }
+                    }
+                }
+
+                Debug.WriteLine($"[V] 同名文件: {nameHits}");
+
                 similarFiles.Add(filePath);
 
                 if (similarFiles.Count > 1)

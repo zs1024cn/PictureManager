@@ -88,6 +88,7 @@ namespace PictureManager
 
         private System.Windows.Forms.Button btnCalc;
         private System.Windows.Forms.ContextMenuStrip menuWorkflow;
+        private System.Windows.Forms.ContextMenuStrip menuDg1;
         // 工作流状态
         private string _currentCompareMode = "Hash";
         private CancellationTokenSource _calcCts;
@@ -254,6 +255,7 @@ namespace PictureManager
                 warmupBrowser.Dispose();
             });
 
+            InitDg1Menu();
             Debug.WriteLine("ID.SortMode after load:" + this.dg1.Columns["ID"].SortMode.ToString());
             _isFormLoadFinished = true;
         }
