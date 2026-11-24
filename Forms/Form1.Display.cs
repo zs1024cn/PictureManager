@@ -281,6 +281,9 @@ namespace PictureManager
 
         private void PlayPendingVideo()
         {
+            _videoStepSeconds = 5.0;
+            _lastStepKeyTime = DateTime.MinValue;
+
             string file = _pendingVideoFile;
             _pendingVideoFile = null;
             if (string.IsNullOrEmpty(file)) return;
